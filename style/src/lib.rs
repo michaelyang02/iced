@@ -37,5 +37,6 @@ pub mod text;
 pub mod text_input;
 pub mod theme;
 pub mod toggler;
+pub mod table;
 
 pub use theme::Theme;

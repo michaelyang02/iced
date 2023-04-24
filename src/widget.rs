@@ -119,6 +119,15 @@ pub mod scrollable {
         iced_native::widget::Scrollable<'a, Message, Renderer>;
 }
 
+pub mod table {
+    //! Display content in a table.
+    pub use iced_native::widget::table::{Appearance, StyleSheet};
+
+    /// A table widget.
+    pub type Table<'a, Message, Renderer = crate::Renderer> =
+        iced_native::widget::Table<'a, Message, Renderer>;
+}
+
 pub mod toggler {
     //! Show toggle controls using togglers.
     pub use iced_native::widget::toggler::{Appearance, StyleSheet};
