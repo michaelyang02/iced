@@ -121,11 +121,15 @@ pub mod scrollable {
 
 pub mod table {
     //! Display content in a table.
-    pub use iced_native::widget::table::{Appearance, StyleSheet};
+    pub use iced_native::widget::table::{Appearance, StyleSheet, Column, Length};
 
     /// A table widget.
     pub type Table<'a, Message, Renderer = crate::Renderer> =
         iced_native::widget::Table<'a, Message, Renderer>;
+
+    /// A table row.
+    pub type Row<'a, Message, Renderer = crate::Renderer> =
+        iced_native::widget::table::Row<'a, Message, Renderer>;
 }
 
 pub mod toggler {

@@ -1,10 +1,12 @@
 //! Display content in a table.
 use std::borrow::Cow;
 
-use iced_core::{Alignment, Length, Padding, Point, Rectangle};
-use iced_core::alignment::{Horizontal, Vertical};
+pub use column::Column as Column;
+use iced_core::{Alignment, Padding, Point, Rectangle};
+use iced_style::container;
 pub use iced_style::table::{Appearance, StyleSheet};
-use row::Row;
+pub use length::Length as Length;
+pub use row::Row as Row;
 
 use crate::{
     Clipboard, Element, event, Event, keyboard, Layout, overlay, renderer,
@@ -13,57 +15,22 @@ use crate::{
 use crate::layout::{flex, Limits, Node};
 use crate::widget::{Container, Operation, Tree};
 
+mod column;
+mod length;
 mod row;
-
-/// The [`Length`] of a [`Column`] width, without the [`Length::Shrink`] variant.
-#[derive(Debug, Copy, Clone)]
-pub enum TableLength {
-    /// Equivalent to [`Length::Fill`].
-    Fill,
-    /// Equivalent to [`Length::FillPortion`].
-    FillPortion(u16),
-    /// Equivalent to [`Length::Fixed`].
-    Fixed(f32),
-}
-
-impl From<TableLength> for Length {
-    fn from(value: TableLength) -> Self {
-        match value {
-            TableLength::Fill => Self::Fill,
-            TableLength::FillPortion(p) => Self::FillPortion(p),
-            TableLength::Fixed(w) => Self::Fixed(w),
-        }
-    }
-}
-
-/// A [`Column`] of a [`Table`] widget.
-#[derive(Debug, Copy, Clone)]
-pub struct Column {
-    /// The width of a [`Column`].
-    pub width: TableLength,
-    /// The [`Horizontal`] and [`Vertical`] alignment of the content of each cell in a [`Column`].
-    pub alignment: (Horizontal, Vertical),
-    /// The [`Padding`] around the content of each cell in a [`Column`].
-    pub cell_padding: Padding,
-}
-
-struct Selected<'a, Message> {
-    selected_rows: Cow<'a, [bool]>,
-    on_selected: Box<dyn Fn(Vec<bool>) -> Message + 'a>,
-}
 
 /// A [`Widget`] that displays its content in the form of a table.
 #[allow(missing_debug_implementations)]
 pub struct Table<'a, Message, Renderer>
     where
         Renderer: crate::Renderer,
-        Renderer::Theme: StyleSheet,
+        Renderer::Theme: StyleSheet + container::StyleSheet,
 {
     columns: Vec<Column>,
     rows: Vec<Element<'a, Message, Renderer>>,
 
     fill_factor: u16,
-    table_padding: Padding,
+    padding: Padding,
 
     selected: Option<Selected<'a, Message>>,
 
@@ -76,7 +43,7 @@ impl<'a, Message, Renderer> Default for Table<'a, Message, Renderer>
     where
         Message: 'a,
         Renderer: crate::Renderer + 'a,
-        Renderer::Theme: StyleSheet,
+        Renderer::Theme: StyleSheet + container::StyleSheet,
 {
     fn default() -> Self {
         Self::try_new(Vec::new(), Vec::new()).unwrap()
@@ -86,17 +53,17 @@ impl<'a, Message, Renderer> Default for Table<'a, Message, Renderer>
 impl<'a, Message, Renderer> Table<'a, Message, Renderer>
     where
         Renderer: crate::Renderer,
-        Renderer::Theme: StyleSheet,
+        Renderer::Theme: StyleSheet + container::StyleSheet,
 {
     /// Tries to create a new [`Table`] with the given list of [`Column`] and [`Row`].
     ///
     /// If the number of ([`Element`], height) pair in each row is equal to the number of [`Column`],
-    /// return [`Ok(Table`].
+    /// return [`Ok(Table)`].
     ///
-    /// Otherwise, return [`Err(usize`] where the error value is the number of [`Column`].
+    /// Otherwise, return [`Err(usize)`] where the error value is the number of [`Column`].
     pub fn try_new(
         columns: Vec<Column>,
-        rows: Vec<(Vec<Element<'a, Message, Renderer>>, f32)>,
+        rows: Vec<Row<'a, Message, Renderer>>,
     ) -> Result<Self, usize>
         where
             Message: 'a,
@@ -105,11 +72,11 @@ impl<'a, Message, Renderer> Table<'a, Message, Renderer>
         Ok(Self {
             rows: {
                 rows.into_iter()
-                    .map(|(row, height)| {
-                        if row.len() != columns.len() {
+                    .map(|Row { cells, height }| {
+                        if cells.len() != columns.len() {
                             Err(columns.len())
                         } else {
-                            Ok(Self::row(row, height, &columns).into())
+                            Ok(Self::row(cells, height, &columns).into())
                         }
                     })
                     .collect::<Result<Vec<_>, _>>()?
@@ -117,7 +84,7 @@ impl<'a, Message, Renderer> Table<'a, Message, Renderer>
             columns,
             fill_factor: 1,
             header: None,
-            table_padding: Padding::ZERO,
+            padding: Padding::ZERO,
             selected: None,
             style: Default::default(),
         })
@@ -126,7 +93,7 @@ impl<'a, Message, Renderer> Table<'a, Message, Renderer>
     /// Sets the width [`Length`] of a [`Table`] to [`Length::FillPortion(fill_factor)`].
     ///
     /// This is applicable only when at least one [`Column`] of the [`Table`] does
-    /// not have a [`TableLength::Fixed`] width. Otherwise, an exact [`Length::Fixed`] width
+    /// not have a [`Length::Fixed`] width. Otherwise, an exact [`Length::Fixed`] width
     /// will be used for the [`Table`] width in layout.
     ///
     ///
@@ -137,8 +104,8 @@ impl<'a, Message, Renderer> Table<'a, Message, Renderer>
     }
 
     /// Sets the amount of [`Padding`] around the [`Table`] content.
-    pub fn table_padding(mut self, padding: impl Into<Padding>) -> Self {
-        self.table_padding = padding.into();
+    pub fn padding(mut self, padding: impl Into<Padding>) -> Self {
+        self.padding = padding.into();
         self
     }
 
@@ -169,31 +136,30 @@ impl<'a, Message, Renderer> Table<'a, Message, Renderer>
 
     /// Tries to set the header of the [`Table`].
     ///
-    /// If the number of [`Element`] in the header is equal to the number of [`Column`]
+    /// If the number of [`Element`] in the header [`Row`] is equal to the number of [`Column`]
     /// of the [`Table`], return [`Ok(Table)`].
     ///
     /// Otherwise, return [`Err(usize)`], where the error value is the number of [`Column`] of the [`Table`].
-    pub fn try_header<E>(
+    pub fn try_header(
         self,
-        header: (Vec<E>, f32),
+        header: Row<'a, Message, Renderer>,
     ) -> Result<Table<'a, Message, Renderer>, usize>
         where
-            E: Into<Element<'a, Message, Renderer>>,
             Message: 'a,
             Renderer: 'a,
     {
         Ok(Table {
             fill_factor: self.fill_factor,
             header: {
-                if header.0.len() != self.columns.len() {
+                if header.cells.len() != self.columns.len() {
                     return Err(self.columns.len());
                 } else {
-                    Some(Self::row(header.0, header.1, &self.columns).into())
+                    Some(Self::row(header.cells, header.height, &self.columns).into())
                 }
             },
             columns: self.columns,
             rows: self.rows,
-            table_padding: self.table_padding,
+            padding: self.padding,
             selected: self.selected,
             style: self.style,
         })
@@ -212,7 +178,7 @@ impl<'a, Message, Renderer> Table<'a, Message, Renderer>
 impl<'a, Message, Renderer> Table<'a, Message, Renderer>
     where
         Renderer: crate::Renderer,
-        Renderer::Theme: StyleSheet,
+        Renderer::Theme: StyleSheet + container::StyleSheet,
 {
     fn row<'b, E>(
         row: Vec<E>,
@@ -224,13 +190,14 @@ impl<'a, Message, Renderer> Table<'a, Message, Renderer>
             Message: 'b,
             Renderer: 'b,
     {
-        Row(
-            row.into_iter()
+        Row {
+            cells: row.into_iter()
                 .zip(columns.iter())
-                .map(|(e, c)| {
+                .map(|(e,
+                          c)| {
                     Container::new(e)
-                        .width(Length::from(c.width))
-                        .height(Length::Fixed(height))
+                        .width(iced_core::Length::from(c.width))
+                        .height(iced_core::Length::Fixed(height))
                         .padding(c.cell_padding)
                         .align_x(c.alignment.0)
                         .align_y(c.alignment.1)
@@ -238,7 +205,7 @@ impl<'a, Message, Renderer> Table<'a, Message, Renderer>
                 })
                 .collect(),
             height,
-        )
+        }
     }
 }
 
@@ -246,35 +213,34 @@ impl<'a, Message, Renderer> Widget<Message, Renderer>
 for Table<'a, Message, Renderer>
     where
         Renderer: crate::Renderer,
-        Renderer::Theme: StyleSheet,
+        Renderer::Theme: StyleSheet + container::StyleSheet,
 {
-    fn width(&self) -> Length {
+    fn width(&self) -> iced_core::Length {
         if self
             .columns
             .iter()
             .map(|c| c.width)
-            .any(|w| !matches!(w, TableLength::Fixed(_)))
+            .any(|w| !matches!(w, Length::Fixed(_)))
         {
-            Length::FillPortion(self.fill_factor)
+            iced_core::Length::FillPortion(self.fill_factor)
         } else {
-            Length::Shrink
+            iced_core::Length::Shrink
         }
     }
 
-    fn height(&self) -> Length {
-        Length::Shrink
+    fn height(&self) -> iced_core::Length {
+        iced_core::Length::Shrink
     }
 
     fn layout(&self, renderer: &Renderer, limits: &Limits) -> Node {
         let limits = limits
-            .pad(self.table_padding)
             .width(self.width())
             .height(self.height());
         flex::resolve(
             flex::Axis::Vertical,
             renderer,
             &limits,
-            Padding::ZERO,
+            self.padding,
             0.0,
             Alignment::Start,
             &self.rows,
@@ -384,11 +350,16 @@ for Element<'a, Message, Renderer>
     where
         Message: 'a,
         Renderer: crate::Renderer + 'a,
-        Renderer::Theme: StyleSheet,
+        Renderer::Theme: StyleSheet + container::StyleSheet,
 {
     fn from(table: Table<'a, Message, Renderer>) -> Self {
         Self::new(table)
     }
+}
+
+struct Selected<'a, Message> {
+    selected_rows: Cow<'a, [bool]>,
+    on_selected: Box<dyn Fn(Vec<bool>) -> Message + 'a>,
 }
 
 /// The local state of a [`Table`].

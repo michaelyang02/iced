@@ -17,6 +17,7 @@ use crate::rule;
 use crate::scrollable;
 use crate::slider;
 use crate::svg;
+use crate::table;
 use crate::text;
 use crate::text_input;
 use crate::toggler;
@@ -619,6 +620,61 @@ impl radio::StyleSheet for Theme {
                 }
             }
             Radio::Custom(custom) => custom.hovered(self, is_selected),
+        }
+    }
+}
+
+    /// The style of a table.
+    #[derive(Default)]
+    pub enum Table {
+        /// The default style.
+        #[default]
+        Default,
+        /// A custom style.
+        Custom(Box<dyn table::StyleSheet<Style = Theme>>),
+    }
+
+impl table::StyleSheet for Theme {
+    type Style = Table;
+
+    fn active(&self, style: &Self::Style) -> table::Appearance {
+        match style {
+            Table::Default => {
+                let palette = self.extended_palette();
+
+                table::Appearance {
+                    background: palette.background.base.color,
+                    vertical_border_width: 1.0,
+                    vertical_border_color: palette.secondary.base.color,
+                    horizontal_border_width: 1.0,
+                    horizontal_border_color: palette.secondary.base.color,
+                    border_radius: 0.0,
+                    border_width: 1.0,
+                    border_color: palette.secondary.base.color,
+                }
+            },
+            Table::Custom(custom) => custom.active(self),
+        }
+    }
+
+    fn header_background(&self, style: &Self::Style) -> Color {
+        match style {
+            Table::Default => self.extended_palette().background.base.color,
+            Table::Custom(custom) => custom.header_background(self)
+        }
+    }
+
+    fn striped_background(&self, style: &Self::Style) -> Color {
+        match style {
+            Table::Default => self.extended_palette().background.weak.color,
+            Table::Custom(custom) => custom.striped_background(self)
+        }
+    }
+
+    fn selected_background(&self, style: &Self::Style) -> Color {
+        match style {
+            Table::Default => self.extended_palette().background.strong.color,
+            Table::Custom(custom) => custom.selected_background(self)
         }
     }
 }
