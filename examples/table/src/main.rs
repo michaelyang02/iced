@@ -54,6 +54,15 @@ impl Sandbox for TableDemo {
             },
         ];
 
+        let header = Row::new(
+            vec![
+                Text::new("Index"),
+                Text::new("Sample Text"),
+                Text::new("What is the best Rust GUI library?"),
+            ],
+            50.0
+        );
+
         let mut rows = Vec::new();
 
         for index in 0..5 {
@@ -73,7 +82,8 @@ impl Sandbox for TableDemo {
 
         let table = Table::try_new(columns, rows).unwrap()
             .fill_factor(1)
-            .padding(Padding::new(50.0));
+            .padding(Padding::new(50.0))
+            .try_header(header).unwrap();
 
         table.into()
     }

@@ -3,7 +3,8 @@ use crate::Widget;
 
 use std::any::{self, Any};
 use std::borrow::Borrow;
-use std::fmt;
+use std::{fmt, mem};
+use itertools::{EitherOrBoth, Itertools};
 
 /// A persistent state widget tree.
 ///
@@ -89,21 +90,33 @@ impl Tree {
         diff: impl Fn(&mut Tree, &T),
         new_state: impl Fn(&T) -> Self,
     ) {
-        if self.children.len() > new_children.len() {
-            self.children.truncate(new_children.len());
-        }
+        self.diff_children_iter(
+            new_children,
+            diff,
+            new_state
+        )
+    }
 
-        for (child_state, new) in
-            self.children.iter_mut().zip(new_children.iter())
-        {
-            diff(child_state, new);
-        }
-
-        if self.children.len() < new_children.len() {
-            self.children.extend(
-                new_children[self.children.len()..].iter().map(new_state),
-            );
-        }
+    pub(crate) fn diff_children_iter<'a, T: 'a>(
+        &mut self,
+        new_children: impl IntoIterator<Item=&'a T>,
+        diff: impl Fn(&mut Tree, &T),
+        new_state: impl Fn(&T) -> Self,
+    ) {
+        self.children = self.children.iter_mut()
+            .zip_longest(new_children.into_iter())
+            .take_while(|zip| matches!(zip, EitherOrBoth::Both(_, _) | EitherOrBoth::Right(_)))
+            .map(|zip| {
+               match zip {
+                   EitherOrBoth::Left(_) => panic!(),
+                   EitherOrBoth::Both(old, new) => {
+                       diff(old, new);
+                       mem::replace(old, Tree::empty())
+                   },
+                   EitherOrBoth::Right(new) => new_state(new),
+               }
+            })
+            .collect();
     }
 }
 

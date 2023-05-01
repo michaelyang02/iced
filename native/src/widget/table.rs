@@ -2,7 +2,7 @@
 use std::borrow::Cow;
 
 pub use column::Column as Column;
-use iced_core::{Alignment, Padding, Point, Rectangle};
+use iced_core::{Alignment, Padding, Point, Rectangle, Size};
 use iced_style::container;
 pub use iced_style::table::{Appearance, StyleSheet};
 pub use length::Length as Length;
@@ -18,6 +18,7 @@ use crate::widget::{Container, Operation, Tree};
 mod column;
 mod length;
 mod row;
+mod iter;
 
 /// A [`Widget`] that displays its content in the form of a table.
 #[allow(missing_debug_implementations)]
@@ -207,9 +208,46 @@ impl<'a, Message, Renderer> Table<'a, Message, Renderer>
             height,
         }
     }
+
+    fn len(&self) -> usize {
+        self.rows.len() + self.header.is_some() as usize
+    }
 }
 
-impl<'a, Message, Renderer> Widget<Message, Renderer>
+impl<'a, 'b, Message: 'a, Renderer: 'a> IntoIterator for &'b Table<'a, Message, Renderer>
+    where
+        Renderer: crate::Renderer,
+        Renderer::Theme: StyleSheet + container::StyleSheet,
+{
+    type Item = &'b Element<'a, Message, Renderer>;
+    type IntoIter = iter::Iter<'a, 'b, Message, Renderer>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        match &self.header {
+            Some(header) => iter::Iter::Header(std::iter::once(header).chain(self.rows.iter())),
+            None => iter::Iter::Content(self.rows.iter()),
+        }
+    }
+}
+
+impl<'a, 'b, Message: 'a, Renderer: 'a> IntoIterator for &'b mut Table<'a, Message, Renderer>
+    where
+        Renderer: crate::Renderer,
+        Renderer::Theme: StyleSheet + container::StyleSheet,
+{
+    type Item = &'b mut Element<'a, Message, Renderer>;
+    type IntoIter = iter::IterMut<'a, 'b, Message, Renderer>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        match &mut self.header {
+            Some(header) => iter::IterMut::Header(std::iter::once(header).chain(self.rows.iter_mut())),
+            None => iter::IterMut::Content(self.rows.iter_mut()),
+        }
+    }
+}
+
+
+impl<'a, Message: 'a, Renderer: 'a> Widget<Message, Renderer>
 for Table<'a, Message, Renderer>
     where
         Renderer: crate::Renderer,
@@ -236,14 +274,16 @@ for Table<'a, Message, Renderer>
         let limits = limits
             .width(self.width())
             .height(self.height());
-        flex::resolve(
+
+        flex::resolve_iter(
             flex::Axis::Vertical,
             renderer,
             &limits,
             self.padding,
             0.0,
             Alignment::Start,
-            &self.rows,
+            self,
+            self.len() + self.header.is_some() as usize,
         )
     }
 
@@ -258,7 +298,7 @@ for Table<'a, Message, Renderer>
         viewport: &Rectangle,
     ) {
         for ((row, state), layout) in
-        self.rows.iter().zip(&tree.children).zip(layout.children())
+        self.into_iter().zip(&tree.children).zip(layout.children())
         {
             row.as_widget().draw(
                 state,
@@ -273,11 +313,15 @@ for Table<'a, Message, Renderer>
     }
 
     fn children(&self) -> Vec<Tree> {
-        self.rows.iter().map(Tree::new).collect()
+        self.into_iter().map(Tree::new).collect()
     }
 
     fn diff(&self, tree: &mut Tree) {
-        tree.diff_children(&self.rows)
+        tree.diff_children_iter(
+            self,
+            |tree, element| tree.diff(element.as_widget()),
+            |element| Tree::new(element.as_widget()),
+        );
     }
 
     fn operate(
@@ -288,8 +332,7 @@ for Table<'a, Message, Renderer>
         operation: &mut dyn Operation<Message>,
     ) {
         operation.container(None, &mut |operation| {
-            self.rows
-                .iter()
+            self.into_iter()
                 .zip(&mut tree.children)
                 .zip(layout.children())
                 .for_each(|((row, state), layout)| {
@@ -317,8 +360,7 @@ for Table<'a, Message, Renderer>
             || tree.state.downcast_mut::<State>(),
         );
 
-        self.rows
-            .iter_mut()
+        self.into_iter()
             .zip(&mut tree.children)
             .zip(layout.children())
             .map(|((row, state), layout)| {
@@ -341,7 +383,7 @@ for Table<'a, Message, Renderer>
         layout: Layout<'_>,
         renderer: &Renderer,
     ) -> Option<overlay::Element<'b, Message, Renderer>> {
-        overlay::from_children(&mut self.rows, state, layout, renderer)
+        overlay::from_children_iter(self, state, layout, renderer)
     }
 }
 
