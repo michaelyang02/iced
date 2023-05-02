@@ -1,24 +1,29 @@
 //! Display content in a table.
 use std::borrow::Cow;
 
+use background::RowBackground;
 pub use column::Column as Column;
-use iced_core::{Alignment, Padding, Point, Rectangle, Size};
+use iced_core::{Alignment, Padding, Point, Rectangle};
 use iced_style::container;
 pub use iced_style::table::{Appearance, StyleSheet};
 pub use length::Length as Length;
 pub use row::Row as Row;
+use selected::Selected;
 
 use crate::{
     Clipboard, Element, event, Event, keyboard, Layout, overlay, renderer,
     Shell, Widget,
 };
 use crate::layout::{flex, Limits, Node};
+use crate::renderer::Quad;
 use crate::widget::{Container, Operation, Tree};
 
 mod column;
 mod length;
 mod row;
 mod iter;
+mod background;
+mod selected;
 
 /// A [`Widget`] that displays its content in the form of a table.
 #[allow(missing_debug_implementations)]
@@ -29,13 +34,13 @@ pub struct Table<'a, Message, Renderer>
 {
     columns: Vec<Column>,
     rows: Vec<Element<'a, Message, Renderer>>,
+    header: Option<Element<'a, Message, Renderer>>,
 
     fill_factor: u16,
     padding: Padding,
+    is_striped: bool,
 
     selected: Option<Selected<'a, Message>>,
-
-    header: Option<Element<'a, Message, Renderer>>,
 
     style: <Renderer::Theme as StyleSheet>::Style,
 }
@@ -86,6 +91,7 @@ impl<'a, Message, Renderer> Table<'a, Message, Renderer>
             fill_factor: 1,
             header: None,
             padding: Padding::ZERO,
+            is_striped: false,
             selected: None,
             style: Default::default(),
         })
@@ -107,6 +113,14 @@ impl<'a, Message, Renderer> Table<'a, Message, Renderer>
     /// Sets the amount of [`Padding`] around the [`Table`] content.
     pub fn padding(mut self, padding: impl Into<Padding>) -> Self {
         self.padding = padding.into();
+        self
+    }
+
+    /// Sets whether alternating content [`Row`]s of a [`Table`] is striped.
+    ///
+    /// The default is [`false`].
+    pub fn striped(mut self, is_striped: bool) -> Self {
+        self.is_striped = is_striped;
         self
     }
 
@@ -161,6 +175,7 @@ impl<'a, Message, Renderer> Table<'a, Message, Renderer>
             columns: self.columns,
             rows: self.rows,
             padding: self.padding,
+            is_striped: self.is_striped,
             selected: self.selected,
             style: self.style,
         })
@@ -176,7 +191,7 @@ impl<'a, Message, Renderer> Table<'a, Message, Renderer>
     }
 }
 
-impl<'a, Message, Renderer> Table<'a, Message, Renderer>
+impl<Message, Renderer> Table<'_, Message, Renderer>
     where
         Renderer: crate::Renderer,
         Renderer::Theme: StyleSheet + container::StyleSheet,
@@ -194,8 +209,7 @@ impl<'a, Message, Renderer> Table<'a, Message, Renderer>
         Row {
             cells: row.into_iter()
                 .zip(columns.iter())
-                .map(|(e,
-                          c)| {
+                .map(|(e, c)| {
                     Container::new(e)
                         .width(iced_core::Length::from(c.width))
                         .height(iced_core::Length::Fixed(height))
@@ -297,9 +311,15 @@ for Table<'a, Message, Renderer>
         cursor_position: Point,
         viewport: &Rectangle,
     ) {
+        let mut background = RowBackground::new(self, theme);
+
         for ((row, state), layout) in
         self.into_iter().zip(&tree.children).zip(layout.children())
         {
+            renderer.fill_quad(
+                row_bounds_to_quad(layout.bounds()),
+                background.next(),
+            );
             row.as_widget().draw(
                 state,
                 renderer,
@@ -399,11 +419,6 @@ for Element<'a, Message, Renderer>
     }
 }
 
-struct Selected<'a, Message> {
-    selected_rows: Cow<'a, [bool]>,
-    on_selected: Box<dyn Fn(Vec<bool>) -> Message + 'a>,
-}
-
 /// The local state of a [`Table`].
 #[derive(Debug, Copy, Clone, Default)]
 pub struct State {
@@ -417,9 +432,18 @@ impl State {
     }
 }
 
+fn row_bounds_to_quad(bounds: Rectangle) -> Quad {
+    Quad {
+        bounds,
+        border_radius: Default::default(),
+        border_width: 0.0,
+        border_color: Default::default(),
+    }
+}
+
 /// Processes the given [`Event`] and updates the [`State`] of a [`Table`]
 /// accordingly.
-pub fn update<'a, Message>(
+fn update<'a, Message>(
     event: Event,
     layout: Layout<'_>,
     cursor_position: Point,

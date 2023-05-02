@@ -83,6 +83,7 @@ impl Sandbox for TableDemo {
         let table = Table::try_new(columns, rows).unwrap()
             .fill_factor(1)
             .padding(Padding::new(50.0))
+            .striped(true)
             .try_header(header).unwrap();
 
         table.into()

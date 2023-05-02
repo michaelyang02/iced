@@ -643,7 +643,7 @@ impl table::StyleSheet for Theme {
                 let palette = self.extended_palette();
 
                 table::Appearance {
-                    background: palette.background.base.color,
+                    background: Background::Color(palette.background.base.color),
                     vertical_border_width: 1.0,
                     vertical_border_color: palette.secondary.base.color,
                     horizontal_border_width: 1.0,
@@ -657,23 +657,23 @@ impl table::StyleSheet for Theme {
         }
     }
 
-    fn header_background(&self, style: &Self::Style) -> Color {
+    fn header_background(&self, style: &Self::Style) -> Background {
         match style {
-            Table::Default => self.extended_palette().background.base.color,
+            Table::Default => Background::Color(self.extended_palette().background.strong.color),
             Table::Custom(custom) => custom.header_background(self)
         }
     }
 
-    fn striped_background(&self, style: &Self::Style) -> Color {
+    fn striped_background(&self, style: &Self::Style) -> Background {
         match style {
-            Table::Default => self.extended_palette().background.weak.color,
+            Table::Default => Background::Color(self.extended_palette().background.weak.color),
             Table::Custom(custom) => custom.striped_background(self)
         }
     }
 
-    fn selected_background(&self, style: &Self::Style) -> Color {
+    fn selected_background(&self, style: &Self::Style) -> Background {
         match style {
-            Table::Default => self.extended_palette().background.strong.color,
+            Table::Default => Background::Color(self.extended_palette().background.strong.color),
             Table::Custom(custom) => custom.selected_background(self)
         }
     }

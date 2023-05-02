@@ -1,11 +1,11 @@
 //! Change the appearance of a table.
-use iced_core::Color;
+use iced_core::{Background, Color};
 
 /// The appearance of a table.
 #[derive(Debug, Clone, Copy)]
 pub struct Appearance {
     /// The background [`Color`] of the table.
-    pub background: Color,
+    pub background: Background,
 
     /// The vertical border width between columns of the table.
     pub vertical_border_width: f32,
@@ -34,17 +34,17 @@ pub trait StyleSheet:  {
     fn active(&self, style: &Self::Style) -> Appearance;
 
     /// Produces the background [`Color`] of the header of a table.
-    fn header_background(&self, style: &Self::Style) -> Color {
+    fn header_background(&self, style: &Self::Style) -> Background {
         self.active(style).background
     }
 
     /// Produces the background [`Color`] of a striped row of a table.
-    fn striped_background(&self, style: &Self::Style) -> Color {
+    fn striped_background(&self, style: &Self::Style) -> Background {
         self.active(style).background
     }
 
     /// Produces the background [`Color`] of a selected row of a table.
-    fn selected_background(&self, style: &Self::Style) -> Color {
+    fn selected_background(&self, style: &Self::Style) -> Background {
         self.active(style).background
     }
 }

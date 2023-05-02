@@ -3,7 +3,7 @@ use crate::Widget;
 
 use std::any::{self, Any};
 use std::borrow::Borrow;
-use std::{fmt, mem};
+use std::fmt;
 use itertools::{EitherOrBoth, Itertools};
 
 /// A persistent state widget tree.
@@ -103,15 +103,16 @@ impl Tree {
         diff: impl Fn(&mut Tree, &T),
         new_state: impl Fn(&T) -> Self,
     ) {
-        self.children = self.children.iter_mut()
+        let old_children = std::mem::take(&mut self.children);
+        self.children = old_children.into_iter()
             .zip_longest(new_children.into_iter())
             .take_while(|zip| matches!(zip, EitherOrBoth::Both(_, _) | EitherOrBoth::Right(_)))
             .map(|zip| {
                match zip {
                    EitherOrBoth::Left(_) => panic!(),
-                   EitherOrBoth::Both(old, new) => {
-                       diff(old, new);
-                       mem::replace(old, Tree::empty())
+                   EitherOrBoth::Both(mut old, new) => {
+                       diff(&mut old, new);
+                       old
                    },
                    EitherOrBoth::Right(new) => new_state(new),
                }

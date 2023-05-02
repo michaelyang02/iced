@@ -105,8 +105,7 @@ pub(crate) fn resolve_iter<'a, Message, Renderer>(
     let mut cross = axis.cross(limits.min()).max(axis.cross(limits.fill()));
     let mut available = axis.main(limits.max()) - total_spacing;
 
-    let mut nodes: Vec<Node> = Vec::with_capacity(items_len);
-    nodes.resize(items_len, Node::default());
+    let mut nodes: Vec<Node> = vec![Node::default(); items_len];
 
     for (i, child) in item_iter.clone().enumerate() {
         let fill_factor = match axis {
