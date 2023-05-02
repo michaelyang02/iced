@@ -84,7 +84,7 @@ impl Sandbox for TableDemo {
             .fill_factor(1)
             .padding(Padding::new(50.0))
             .striped(true)
-            .try_header(header).unwrap();
+            .try_header(header, Some((Horizontal::Center, Vertical::Center))).unwrap();
 
         table.into()
     }

@@ -4,6 +4,7 @@ use std::borrow::Cow;
 use background::RowBackground;
 pub use column::Column as Column;
 use iced_core::{Alignment, Padding, Point, Rectangle};
+use iced_core::alignment::{Horizontal, Vertical};
 use iced_style::container;
 pub use iced_style::table::{Appearance, StyleSheet};
 pub use length::Length as Length;
@@ -61,12 +62,12 @@ impl<'a, Message, Renderer> Table<'a, Message, Renderer>
         Renderer: crate::Renderer,
         Renderer::Theme: StyleSheet + container::StyleSheet,
 {
-    /// Tries to create a new [`Table`] with the given list of [`Column`] and [`Row`].
+    /// Tries to create a new [`Table`] with the given list of [`Column`]s and [`Row`]s.
     ///
-    /// If the number of ([`Element`], height) pair in each row is equal to the number of [`Column`],
+    /// If the number of [`Element`]s in each row is equal to the number of [`Column`]s,
     /// return [`Ok(Table)`].
     ///
-    /// Otherwise, return [`Err(usize)`] where the error value is the number of [`Column`].
+    /// Otherwise, return [`Err(usize)`] where the error value is the number of [`Column`]s.
     pub fn try_new(
         columns: Vec<Column>,
         rows: Vec<Row<'a, Message, Renderer>>,
@@ -82,7 +83,7 @@ impl<'a, Message, Renderer> Table<'a, Message, Renderer>
                         if cells.len() != columns.len() {
                             Err(columns.len())
                         } else {
-                            Ok(Self::row(cells, height, &columns).into())
+                            Ok(Self::row(cells, height, &columns, None).into())
                         }
                     })
                     .collect::<Result<Vec<_>, _>>()?
@@ -124,15 +125,15 @@ impl<'a, Message, Renderer> Table<'a, Message, Renderer>
         self
     }
 
-    /// Tries to set the behaviour when the list of selected [`Row`] of the [`Table`] is changed.
+    /// Tries to set the behaviour when the list of selected [`Row`]s of the [`Table`] is changed.
     ///
-    /// * `selected_rows` - a [`bool`] slice corresponding to whether each row is selected
-    /// * `on_selected` - the message to produce given the changed list of selected [`Row`]
+    /// * `selected_rows` - a [`bool`] slice corresponding to whether each row is selected.
+    /// * `on_selected` - the message to produce given the changed list of selected [`Row`]s.
     ///
-    /// If the length of `selected_rows` is equal to the number of [`Row`] of the [`Table`],
+    /// If the length of `selected_rows` is equal to the number of [`Row`]s of the [`Table`],
     /// return [`Ok(Table)`].
     ///
-    /// Otherwise, return [`Err(usize)`], where the error value is the number of [`Row`] of the [`Table`].
+    /// Otherwise, return [`Err(usize)`], where the error value is the number of [`Row`]s of the [`Table`].
     pub fn try_selected(
         mut self,
         selected_rows: &'a [bool],
@@ -151,13 +152,17 @@ impl<'a, Message, Renderer> Table<'a, Message, Renderer>
 
     /// Tries to set the header of the [`Table`].
     ///
-    /// If the number of [`Element`] in the header [`Row`] is equal to the number of [`Column`]
+    /// * If the number of [`Element`]s in the `header` [`Row`] is equal to the number of [`Column`]
     /// of the [`Table`], return [`Ok(Table)`].
+    /// Otherwise, return [`Err(usize)`],
+    /// where the error value is the number of [`Column`]s of the [`Table`].
     ///
-    /// Otherwise, return [`Err(usize)`], where the error value is the number of [`Column`] of the [`Table`].
+    /// * If `overriding_alignment` is [`Some(_)`], it is applied to all cells of the header [`Row`].
+    /// Otherwise, the alignments of each [`Column`] of the [`Table`] is applied.
     pub fn try_header(
         self,
         header: Row<'a, Message, Renderer>,
+        overriding_alignments: Option<(Horizontal, Vertical)>,
     ) -> Result<Table<'a, Message, Renderer>, usize>
         where
             Message: 'a,
@@ -169,7 +174,7 @@ impl<'a, Message, Renderer> Table<'a, Message, Renderer>
                 if header.cells.len() != self.columns.len() {
                     return Err(self.columns.len());
                 } else {
-                    Some(Self::row(header.cells, header.height, &self.columns).into())
+                    Some(Self::row(header.cells, header.height, &self.columns, overriding_alignments).into())
                 }
             },
             columns: self.columns,
@@ -200,6 +205,7 @@ impl<Message, Renderer> Table<'_, Message, Renderer>
         row: Vec<E>,
         height: f32,
         columns: &'_ [Column],
+        overriding_alignments: Option<(Horizontal, Vertical)>
     ) -> Row<'b, Message, Renderer>
         where
             E: Into<Element<'b, Message, Renderer>>,
@@ -214,8 +220,8 @@ impl<Message, Renderer> Table<'_, Message, Renderer>
                         .width(iced_core::Length::from(c.width))
                         .height(iced_core::Length::Fixed(height))
                         .padding(c.cell_padding)
-                        .align_x(c.alignment.0)
-                        .align_y(c.alignment.1)
+                        .align_x(overriding_alignments.unwrap_or(c.alignment).0)
+                        .align_y(overriding_alignments.unwrap_or(c.alignment).1)
                         .into()
                 })
                 .collect(),

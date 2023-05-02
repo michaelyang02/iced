@@ -8,7 +8,7 @@ use super::length::Length;
 pub struct Column {
     /// The width of a [`Column`].
     pub width: Length,
-    /// The [`Horizontal`] and [`Vertical`] alignment of the content of each cell in a [`Column`].
+    /// The [`Horizontal`] and [`Vertical`] alignments of the content of each cell in a [`Column`].
     pub alignment: (Horizontal, Vertical),
     /// The [`Padding`] around the content of each cell in a [`Column`].
     pub cell_padding: Padding,
