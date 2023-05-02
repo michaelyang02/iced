@@ -2,36 +2,36 @@
 use std::borrow::Cow;
 
 use background::RowBackground;
-pub use column::Column as Column;
-use iced_core::{Alignment, Padding, Point, Rectangle};
+pub use column::Column;
 use iced_core::alignment::{Horizontal, Vertical};
+use iced_core::{Alignment, Padding, Point, Rectangle};
 use iced_style::container;
 pub use iced_style::table::{Appearance, StyleSheet};
-pub use length::Length as Length;
-pub use row::Row as Row;
+pub use length::Length;
+pub use row::Row;
 use selected::Selected;
 
-use crate::{
-    Clipboard, Element, event, Event, keyboard, Layout, overlay, renderer,
-    Shell, Widget,
-};
 use crate::layout::{flex, Limits, Node};
 use crate::renderer::Quad;
 use crate::widget::{Container, Operation, Tree};
+use crate::{
+    event, keyboard, overlay, renderer, Clipboard, Element, Event, Layout,
+    Shell, Widget,
+};
 
+mod background;
 mod column;
+mod iter;
 mod length;
 mod row;
-mod iter;
-mod background;
 mod selected;
 
 /// A [`Widget`] that displays its content in the form of a table.
 #[allow(missing_debug_implementations)]
 pub struct Table<'a, Message, Renderer>
-    where
-        Renderer: crate::Renderer,
-        Renderer::Theme: StyleSheet + container::StyleSheet,
+where
+    Renderer: crate::Renderer,
+    Renderer::Theme: StyleSheet + container::StyleSheet,
 {
     columns: Vec<Column>,
     rows: Vec<Element<'a, Message, Renderer>>,
@@ -47,10 +47,10 @@ pub struct Table<'a, Message, Renderer>
 }
 
 impl<'a, Message, Renderer> Default for Table<'a, Message, Renderer>
-    where
-        Message: 'a,
-        Renderer: crate::Renderer + 'a,
-        Renderer::Theme: StyleSheet + container::StyleSheet,
+where
+    Message: 'a,
+    Renderer: crate::Renderer + 'a,
+    Renderer::Theme: StyleSheet + container::StyleSheet,
 {
     fn default() -> Self {
         Self::try_new(Vec::new(), Vec::new()).unwrap()
@@ -58,9 +58,9 @@ impl<'a, Message, Renderer> Default for Table<'a, Message, Renderer>
 }
 
 impl<'a, Message, Renderer> Table<'a, Message, Renderer>
-    where
-        Renderer: crate::Renderer,
-        Renderer::Theme: StyleSheet + container::StyleSheet,
+where
+    Renderer: crate::Renderer,
+    Renderer::Theme: StyleSheet + container::StyleSheet,
 {
     /// Tries to create a new [`Table`] with the given list of [`Column`]s and [`Row`]s.
     ///
@@ -72,9 +72,9 @@ impl<'a, Message, Renderer> Table<'a, Message, Renderer>
         columns: Vec<Column>,
         rows: Vec<Row<'a, Message, Renderer>>,
     ) -> Result<Self, usize>
-        where
-            Message: 'a,
-            Renderer: 'a,
+    where
+        Message: 'a,
+        Renderer: 'a,
     {
         Ok(Self {
             rows: {
@@ -164,9 +164,9 @@ impl<'a, Message, Renderer> Table<'a, Message, Renderer>
         header: Row<'a, Message, Renderer>,
         overriding_alignments: Option<(Horizontal, Vertical)>,
     ) -> Result<Table<'a, Message, Renderer>, usize>
-        where
-            Message: 'a,
-            Renderer: 'a,
+    where
+        Message: 'a,
+        Renderer: 'a,
     {
         Ok(Table {
             fill_factor: self.fill_factor,
@@ -174,7 +174,15 @@ impl<'a, Message, Renderer> Table<'a, Message, Renderer>
                 if header.cells.len() != self.columns.len() {
                     return Err(self.columns.len());
                 } else {
-                    Some(Self::row(header.cells, header.height, &self.columns, overriding_alignments).into())
+                    Some(
+                        Self::row(
+                            header.cells,
+                            header.height,
+                            &self.columns,
+                            overriding_alignments,
+                        )
+                        .into(),
+                    )
                 }
             },
             columns: self.columns,
@@ -197,23 +205,24 @@ impl<'a, Message, Renderer> Table<'a, Message, Renderer>
 }
 
 impl<Message, Renderer> Table<'_, Message, Renderer>
-    where
-        Renderer: crate::Renderer,
-        Renderer::Theme: StyleSheet + container::StyleSheet,
+where
+    Renderer: crate::Renderer,
+    Renderer::Theme: StyleSheet + container::StyleSheet,
 {
     fn row<'b, E>(
         row: Vec<E>,
         height: f32,
         columns: &'_ [Column],
-        overriding_alignments: Option<(Horizontal, Vertical)>
+        overriding_alignments: Option<(Horizontal, Vertical)>,
     ) -> Row<'b, Message, Renderer>
-        where
-            E: Into<Element<'b, Message, Renderer>>,
-            Message: 'b,
-            Renderer: 'b,
+    where
+        E: Into<Element<'b, Message, Renderer>>,
+        Message: 'b,
+        Renderer: 'b,
     {
         Row {
-            cells: row.into_iter()
+            cells: row
+                .into_iter()
                 .zip(columns.iter())
                 .map(|(e, c)| {
                     Container::new(e)
@@ -234,44 +243,49 @@ impl<Message, Renderer> Table<'_, Message, Renderer>
     }
 }
 
-impl<'a, 'b, Message: 'a, Renderer: 'a> IntoIterator for &'b Table<'a, Message, Renderer>
-    where
-        Renderer: crate::Renderer,
-        Renderer::Theme: StyleSheet + container::StyleSheet,
+impl<'a, 'b, Message: 'a, Renderer: 'a> IntoIterator
+    for &'b Table<'a, Message, Renderer>
+where
+    Renderer: crate::Renderer,
+    Renderer::Theme: StyleSheet + container::StyleSheet,
 {
     type Item = &'b Element<'a, Message, Renderer>;
     type IntoIter = iter::Iter<'a, 'b, Message, Renderer>;
 
     fn into_iter(self) -> Self::IntoIter {
         match &self.header {
-            Some(header) => iter::Iter::Header(std::iter::once(header).chain(self.rows.iter())),
+            Some(header) => iter::Iter::Header(
+                std::iter::once(header).chain(self.rows.iter()),
+            ),
             None => iter::Iter::Content(self.rows.iter()),
         }
     }
 }
 
-impl<'a, 'b, Message: 'a, Renderer: 'a> IntoIterator for &'b mut Table<'a, Message, Renderer>
-    where
-        Renderer: crate::Renderer,
-        Renderer::Theme: StyleSheet + container::StyleSheet,
+impl<'a, 'b, Message: 'a, Renderer: 'a> IntoIterator
+    for &'b mut Table<'a, Message, Renderer>
+where
+    Renderer: crate::Renderer,
+    Renderer::Theme: StyleSheet + container::StyleSheet,
 {
     type Item = &'b mut Element<'a, Message, Renderer>;
     type IntoIter = iter::IterMut<'a, 'b, Message, Renderer>;
 
     fn into_iter(self) -> Self::IntoIter {
         match &mut self.header {
-            Some(header) => iter::IterMut::Header(std::iter::once(header).chain(self.rows.iter_mut())),
+            Some(header) => iter::IterMut::Header(
+                std::iter::once(header).chain(self.rows.iter_mut()),
+            ),
             None => iter::IterMut::Content(self.rows.iter_mut()),
         }
     }
 }
 
-
 impl<'a, Message: 'a, Renderer: 'a> Widget<Message, Renderer>
-for Table<'a, Message, Renderer>
-    where
-        Renderer: crate::Renderer,
-        Renderer::Theme: StyleSheet + container::StyleSheet,
+    for Table<'a, Message, Renderer>
+where
+    Renderer: crate::Renderer,
+    Renderer::Theme: StyleSheet + container::StyleSheet,
 {
     fn width(&self) -> iced_core::Length {
         if self
@@ -291,9 +305,7 @@ for Table<'a, Message, Renderer>
     }
 
     fn layout(&self, renderer: &Renderer, limits: &Limits) -> Node {
-        let limits = limits
-            .width(self.width())
-            .height(self.height());
+        let limits = limits.width(self.width()).height(self.height());
 
         flex::resolve_iter(
             flex::Axis::Vertical,
@@ -320,7 +332,7 @@ for Table<'a, Message, Renderer>
         let mut background = RowBackground::new(self, theme);
 
         for ((row, state), layout) in
-        self.into_iter().zip(&tree.children).zip(layout.children())
+            self.into_iter().zip(&tree.children).zip(layout.children())
         {
             renderer.fill_quad(
                 row_bounds_to_quad(layout.bounds()),
@@ -414,11 +426,11 @@ for Table<'a, Message, Renderer>
 }
 
 impl<'a, Message, Renderer> From<Table<'a, Message, Renderer>>
-for Element<'a, Message, Renderer>
-    where
-        Message: 'a,
-        Renderer: crate::Renderer + 'a,
-        Renderer::Theme: StyleSheet + container::StyleSheet,
+    for Element<'a, Message, Renderer>
+where
+    Message: 'a,
+    Renderer: crate::Renderer + 'a,
+    Renderer::Theme: StyleSheet + container::StyleSheet,
 {
     fn from(table: Table<'a, Message, Renderer>) -> Self {
         Self::new(table)

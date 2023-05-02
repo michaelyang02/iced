@@ -1,4 +1,3 @@
-
 /// The [`Length`] of a [`Column`] width, without the [`Length::Shrink`] variant.
 #[derive(Debug, Copy, Clone)]
 pub enum Length {

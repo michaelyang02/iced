@@ -1,23 +1,29 @@
-use std::slice;
+use crate::Element;
 use iced_style::container;
 use iced_style::table::StyleSheet;
-use crate::Element;
-
+use std::slice;
 
 /// An [`Iterator`] for all rows (incl. header) of a [`Table`].
 #[allow(missing_debug_implementations)]
 pub enum Iter<'a, 'b, Message, Renderer>
-    where
-        Renderer: crate::Renderer,
-        Renderer::Theme: StyleSheet + container::StyleSheet,
+where
+    Renderer: crate::Renderer,
+    Renderer::Theme: StyleSheet + container::StyleSheet,
 {
-    Header(std::iter::Chain<std::iter::Once<&'b Element<'a, Message, Renderer>>, slice::Iter<'b, Element<'a, Message, Renderer>>>),
-    Content(slice::Iter<'b, Element<'a, Message, Renderer>>)
+    Header(
+        std::iter::Chain<
+            std::iter::Once<&'b Element<'a, Message, Renderer>>,
+            slice::Iter<'b, Element<'a, Message, Renderer>>,
+        >,
+    ),
+    Content(slice::Iter<'b, Element<'a, Message, Renderer>>),
 }
 
-impl<'a, 'b, Message, Renderer> Clone for Iter<'a, 'b, Message, Renderer> where
+impl<'a, 'b, Message, Renderer> Clone for Iter<'a, 'b, Message, Renderer>
+where
     Renderer: crate::Renderer,
-    Renderer::Theme: StyleSheet + container::StyleSheet, {
+    Renderer::Theme: StyleSheet + container::StyleSheet,
+{
     fn clone(&self) -> Self {
         match self {
             Iter::Header(iter) => Iter::Header(iter.clone()),
@@ -27,9 +33,9 @@ impl<'a, 'b, Message, Renderer> Clone for Iter<'a, 'b, Message, Renderer> where
 }
 
 impl<'a, 'b, Message, Renderer> Iterator for Iter<'a, 'b, Message, Renderer>
-    where
-        Renderer: crate::Renderer,
-        Renderer::Theme: StyleSheet + container::StyleSheet,
+where
+    Renderer: crate::Renderer,
+    Renderer::Theme: StyleSheet + container::StyleSheet,
 {
     type Item = &'b Element<'a, Message, Renderer>;
 
@@ -44,18 +50,23 @@ impl<'a, 'b, Message, Renderer> Iterator for Iter<'a, 'b, Message, Renderer>
 /// A mutable [`Iterator`] for all rows (incl. header) of a [`Table`].
 #[allow(missing_debug_implementations)]
 pub enum IterMut<'a, 'b, Message, Renderer>
-    where
-        Renderer: crate::Renderer,
-        Renderer::Theme: StyleSheet + container::StyleSheet,
+where
+    Renderer: crate::Renderer,
+    Renderer::Theme: StyleSheet + container::StyleSheet,
 {
-    Header(std::iter::Chain<std::iter::Once<&'b mut Element<'a, Message, Renderer>>, slice::IterMut<'b, Element<'a, Message, Renderer>>>),
-    Content(slice::IterMut<'b, Element<'a, Message, Renderer>>)
+    Header(
+        std::iter::Chain<
+            std::iter::Once<&'b mut Element<'a, Message, Renderer>>,
+            slice::IterMut<'b, Element<'a, Message, Renderer>>,
+        >,
+    ),
+    Content(slice::IterMut<'b, Element<'a, Message, Renderer>>),
 }
 
 impl<'a, 'b, Message, Renderer> Iterator for IterMut<'a, 'b, Message, Renderer>
-    where
-        Renderer: crate::Renderer,
-        Renderer::Theme: StyleSheet + container::StyleSheet,
+where
+    Renderer: crate::Renderer,
+    Renderer::Theme: StyleSheet + container::StyleSheet,
 {
     type Item = &'b mut Element<'a, Message, Renderer>;
 

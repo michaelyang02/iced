@@ -26,7 +26,7 @@ pub struct Appearance {
 }
 
 /// A set of rules that dictate the style of a table.
-pub trait StyleSheet:  {
+pub trait StyleSheet {
     /// The supported style of the [`StyleSheet`].
     type Style: Default;
 

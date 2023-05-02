@@ -11,8 +11,7 @@ enum RowType {
 }
 
 impl RowType {
-    fn new(has_header: bool, is_striped: bool) -> Self
-    {
+    fn new(has_header: bool, is_striped: bool) -> Self {
         let striped = is_striped.then_some(false);
         if has_header {
             Self::Header(striped)
@@ -25,7 +24,9 @@ impl RowType {
         let current = *self;
         match self {
             RowType::Header(striped) => *self = RowType::Content(*striped),
-            RowType::Content(striped) => *self = RowType::Content(striped.map(|s| !s)),
+            RowType::Content(striped) => {
+                *self = RowType::Content(striped.map(|s| !s))
+            }
         };
         current
     }
@@ -43,27 +44,29 @@ pub(super) struct RowBackground {
 
 impl RowBackground {
     pub(super) fn new<M, R>(table: &Table<'_, M, R>, theme: &R::Theme) -> Self
-        where R: crate::Renderer,
-              R::Theme: StyleSheet + container::StyleSheet,
+    where
+        R: crate::Renderer,
+        R::Theme: StyleSheet + container::StyleSheet,
     {
         Self {
             normal: theme.active(&table.style).background,
             header: theme.header_background(&table.style),
             striped: theme.striped_background(&table.style),
             selected: theme.selected_background(&table.style),
-            current_type: RowType::new(table.header.is_some(), table.is_striped),
+            current_type: RowType::new(
+                table.header.is_some(),
+                table.is_striped,
+            ),
         }
     }
 
     pub(super) fn next(&mut self) -> Background {
         match self.current_type.next() {
             RowType::Header(_) => self.header,
-            RowType::Content(striped) => {
-                match striped {
-                    None | Some(false) => self.normal,
-                    Some(true) => self.striped,
-                }
-            }
+            RowType::Content(striped) => match striped {
+                None | Some(false) => self.normal,
+                Some(true) => self.striped,
+            },
         }
     }
 }

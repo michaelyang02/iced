@@ -67,8 +67,8 @@ pub fn resolve<Message, Renderer>(
     align_items: Alignment,
     items: &[Element<'_, Message, Renderer>],
 ) -> Node
-    where
-        Renderer: crate::Renderer,
+where
+    Renderer: crate::Renderer,
 {
     resolve_iter(
         axis,
@@ -89,11 +89,15 @@ pub(crate) fn resolve_iter<'a, Message, Renderer>(
     padding: Padding,
     spacing: f32,
     align_items: Alignment,
-    items: impl IntoIterator<IntoIter=impl Iterator<Item=impl std::borrow::Borrow<dyn Widget<Message, Renderer> + 'a>> + Clone>,
+    items: impl IntoIterator<
+        IntoIter = impl Iterator<
+            Item = impl std::borrow::Borrow<dyn Widget<Message, Renderer> + 'a>,
+        > + Clone,
+    >,
     items_len: usize,
 ) -> Node
-    where
-        Renderer: crate::Renderer,
+where
+    Renderer: crate::Renderer,
 {
     let item_iter = items.into_iter();
 
@@ -112,7 +116,7 @@ pub(crate) fn resolve_iter<'a, Message, Renderer>(
             Axis::Horizontal => child.borrow().width(),
             Axis::Vertical => child.borrow().height(),
         }
-            .fill_factor();
+        .fill_factor();
 
         if fill_factor == 0 {
             let (max_width, max_height) = axis.pack(available, max_cross);
@@ -139,7 +143,7 @@ pub(crate) fn resolve_iter<'a, Message, Renderer>(
             Axis::Horizontal => child.borrow().width(),
             Axis::Vertical => child.borrow().height(),
         }
-            .fill_factor();
+        .fill_factor();
 
         if fill_factor != 0 {
             let max_main = remaining * fill_factor as f32 / fill_sum as f32;

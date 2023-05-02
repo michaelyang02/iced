@@ -1,11 +1,11 @@
 use iced_core::{Alignment, Length, Padding, Point, Rectangle};
 use iced_style::table::StyleSheet;
 
-use crate::{Clipboard, Element, event, Event, Layout, overlay, Shell, Widget};
-use crate::layout::{flex, Limits, Node};
 use crate::layout::flex::Axis;
+use crate::layout::{flex, Limits, Node};
 use crate::renderer::Style;
 use crate::widget::{Operation, Tree};
+use crate::{event, overlay, Clipboard, Element, Event, Layout, Shell, Widget};
 
 /// A [`Row`] of a [`Table`] widget.
 #[allow(missing_debug_implementations)]
@@ -27,8 +27,8 @@ where
 {
     /// Creates a new [`Table`] row.
     pub fn new<E>(cells: Vec<E>, height: f32) -> Self
-        where
-            E: Into<Element<'a, Message, Renderer>>
+    where
+        E: Into<Element<'a, Message, Renderer>>,
     {
         Self {
             cells: cells.into_iter().map(|c| c.into()).collect(),
@@ -37,15 +37,14 @@ where
     }
 }
 
-
 mod private {
     use super::*;
 
     impl<'a, Message, Renderer> Widget<Message, Renderer>
-    for Row<'a, Message, Renderer>
-        where
-            Renderer: crate::Renderer,
-            Renderer::Theme: StyleSheet,
+        for Row<'a, Message, Renderer>
+    where
+        Renderer: crate::Renderer,
+        Renderer::Theme: StyleSheet,
     {
         fn width(&self) -> Length {
             Length::Fill
@@ -79,7 +78,7 @@ mod private {
             viewport: &Rectangle,
         ) {
             for ((cell, state), layout) in
-            self.cells.iter().zip(&tree.children).zip(layout.children())
+                self.cells.iter().zip(&tree.children).zip(layout.children())
             {
                 cell.as_widget().draw(
                     state,
@@ -158,17 +157,15 @@ mod private {
         }
     }
 
-
     impl<'a, Message, Renderer> From<Row<'a, Message, Renderer>>
-    for Element<'a, Message, Renderer>
-        where
-            Message: 'a,
-            Renderer: crate::Renderer + 'a,
-            Renderer::Theme: StyleSheet,
+        for Element<'a, Message, Renderer>
+    where
+        Message: 'a,
+        Renderer: crate::Renderer + 'a,
+        Renderer::Theme: StyleSheet,
     {
         fn from(row: Row<'a, Message, Renderer>) -> Self {
             Self::new(row)
         }
     }
 }
-

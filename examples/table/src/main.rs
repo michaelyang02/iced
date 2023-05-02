@@ -1,7 +1,7 @@
-use iced::{Element, Padding, Sandbox, Settings};
 use iced::alignment::{Horizontal, Vertical};
 use iced::widget::table::{Column, Length, Row, Table};
 use iced::widget::Text;
+use iced::{Element, Padding, Sandbox, Settings};
 
 pub fn main() -> iced::Result {
     TableDemo::run(Settings::default())
@@ -35,7 +35,6 @@ impl Sandbox for TableDemo {
     }
 
     fn view(&self) -> Element<Self::Message> {
-
         let columns = vec![
             Column {
                 width: Length::Fixed(100.0),
@@ -60,7 +59,7 @@ impl Sandbox for TableDemo {
                 Text::new("Sample Text"),
                 Text::new("What is the best Rust GUI library?"),
             ],
-            50.0
+            50.0,
         );
 
         let mut rows = Vec::new();
@@ -80,11 +79,13 @@ impl Sandbox for TableDemo {
             ));
         }
 
-        let table = Table::try_new(columns, rows).unwrap()
+        let table = Table::try_new(columns, rows)
+            .unwrap()
             .fill_factor(1)
             .padding(Padding::new(50.0))
             .striped(true)
-            .try_header(header, Some((Horizontal::Center, Vertical::Center))).unwrap();
+            .try_header(header, Some((Horizontal::Center, Vertical::Center)))
+            .unwrap();
 
         table.into()
     }
