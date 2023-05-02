@@ -4,6 +4,7 @@ use std::borrow::Cow;
 use background::RowBackground;
 pub use column::Column;
 use iced_core::alignment::{Horizontal, Vertical};
+use iced_core::mouse::Interaction;
 use iced_core::{Alignment, Padding, Point, Rectangle};
 use iced_style::container;
 pub use iced_style::table::{Appearance, StyleSheet};
@@ -413,6 +414,30 @@ where
                 )
             })
             .fold(table_status, event::Status::merge)
+    }
+
+    fn mouse_interaction(
+        &self,
+        tree: &Tree,
+        layout: Layout<'_>,
+        cursor_position: Point,
+        viewport: &Rectangle,
+        renderer: &Renderer,
+    ) -> Interaction {
+        self.into_iter()
+            .zip(&tree.children)
+            .zip(layout.children())
+            .map(|((row, state), layout)| {
+                row.as_widget().mouse_interaction(
+                    state,
+                    layout,
+                    cursor_position,
+                    viewport,
+                    renderer,
+                )
+            })
+            .max()
+            .unwrap_or_default()
     }
 
     fn overlay<'b>(

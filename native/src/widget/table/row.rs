@@ -26,19 +26,17 @@ where
     Renderer::Theme: StyleSheet,
 {
     /// Creates a new [`Table`] row.
-    pub fn new<E>(cells: Vec<E>, height: f32) -> Self
-    where
-        E: Into<Element<'a, Message, Renderer>>,
-    {
-        Self {
-            cells: cells.into_iter().map(|c| c.into()).collect(),
-            height,
-        }
+    pub fn new(
+        cells: Vec<Element<'a, Message, Renderer>>,
+        height: f32,
+    ) -> Self {
+        Self { cells, height }
     }
 }
 
 mod private {
     use super::*;
+    use iced_core::mouse::Interaction;
 
     impl<'a, Message, Renderer> Widget<Message, Renderer>
         for Row<'a, Message, Renderer>
@@ -145,6 +143,30 @@ mod private {
                     )
                 })
                 .fold(event::Status::Ignored, event::Status::merge)
+        }
+
+        fn mouse_interaction(
+            &self,
+            tree: &Tree,
+            layout: Layout<'_>,
+            cursor_position: Point,
+            viewport: &Rectangle,
+            renderer: &Renderer,
+        ) -> Interaction {
+            self.cells.iter()
+            .zip(&tree.children)
+            .zip(layout.children())
+            .map(|((cell, state), layout)| {
+                cell.as_widget().mouse_interaction(
+                    state,
+                    layout,
+                    cursor_position,
+                    viewport,
+                    renderer,
+                )
+            })
+            .max()
+            .unwrap_or_default()
         }
 
         fn overlay<'b>(
