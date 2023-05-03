@@ -76,7 +76,10 @@ where
         height: f32,
     ) -> Self {
         Self {
-            cells: cells.into_iter().map(|c| c.unwrap_or(Element::from(empty::Empty {}))).collect(),
+            cells: cells
+                .into_iter()
+                .map(|c| c.unwrap_or(Element::from(empty::Empty {})))
+                .collect(),
             height,
         }
     }

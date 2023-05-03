@@ -355,7 +355,7 @@ where
                 viewport,
             );
         }
-        Self::draw_table_borders(renderer, layout.bounds(), self.padding, appearance);
+        Self::draw_borders(renderer, layout, self.padding, appearance);
     }
 
     fn children(&self) -> Vec<Tree> {
@@ -482,10 +482,24 @@ impl State {
     }
 }
 
+/// Processes the given [`Event`] and updates the [`State`] of a [`Table`]
+/// accordingly.
+fn update<'a, Message>(
+    event: Event,
+    layout: Layout<'_>,
+    cursor_position: Point,
+    shell: &mut Shell<'_, Message>,
+    on_selected: Option<&(dyn Fn(Vec<bool>) -> Message + 'a)>,
+    state: impl FnOnce() -> &'a mut State,
+) -> event::Status {
+    event::Status::Ignored
+}
+
+
 impl<Message, Renderer> Table<'_, Message, Renderer>
-where
-    Renderer: crate::Renderer,
-    Renderer::Theme: StyleSheet + container::StyleSheet,
+    where
+        Renderer: crate::Renderer,
+        Renderer::Theme: StyleSheet + container::StyleSheet,
 {
     fn paint_row(
         renderer: &mut Renderer,
@@ -495,21 +509,26 @@ where
         renderer.fill_quad(row_bounds_to_quad(bounds), background.next());
     }
 
-    fn draw_borders() {
-        // Self::draw_table_borders();
-        // Self::draw_horizontal_borders();
+    fn draw_borders(
+        renderer: &mut Renderer,
+        layout: Layout<'_>,
+        padding: Padding,
+        appearance: Appearance,
+    ) {
+        Self::draw_table_borders(renderer, layout, padding, appearance);
+        Self::draw_horizontal_borders(renderer, layout, appearance);
         // Self::draw_vertical_borders();
     }
 
     fn draw_table_borders(
         renderer: &mut Renderer,
-        bounds: Rectangle,
+        layout: Layout<'_>,
         padding: Padding,
         appearance: Appearance,
     ) {
         renderer.fill_quad(
             Quad {
-                bounds: bounds.pad(padding_with_border_width(
+                bounds: layout.bounds().pad(padding_with_border_width(
                     padding,
                     appearance.border_width,
                 )),
@@ -521,8 +540,28 @@ where
         );
     }
 
-    fn draw_horizontal_borders() {
-        todo!()
+    fn draw_horizontal_borders(
+        renderer: &mut Renderer,
+        layout: Layout<'_>,
+        appearance: Appearance,
+    ) {
+        for layout in layout.children().skip(1) {
+            let bounds = layout.bounds();
+            renderer.fill_quad(
+                Quad {
+                    bounds: Rectangle {
+                        x: bounds.x,
+                        y: bounds.y - appearance.horizontal_border_width / 2.,
+                        width: bounds.width,
+                        height: appearance.horizontal_border_width,
+                    },
+                    border_radius: Default::default(),
+                    border_width: 0.0,
+                    border_color: Default::default(),
+                },
+                appearance.horizontal_border_color
+            )
+        }
     }
 
     fn draw_vertical_borders() {
@@ -546,17 +585,4 @@ fn padding_with_border_width(padding: Padding, border_width: f32) -> Padding {
         bottom: padding.bottom - border_width,
         left: padding.left - border_width,
     }
-}
-
-/// Processes the given [`Event`] and updates the [`State`] of a [`Table`]
-/// accordingly.
-fn update<'a, Message>(
-    event: Event,
-    layout: Layout<'_>,
-    cursor_position: Point,
-    shell: &mut Shell<'_, Message>,
-    on_selected: Option<&(dyn Fn(Vec<bool>) -> Message + 'a)>,
-    state: impl FnOnce() -> &'a mut State,
-) -> event::Status {
-    event::Status::Ignored
 }

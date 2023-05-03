@@ -65,7 +65,7 @@ impl Sandbox for TableDemo {
         let header = Row::new(
             vec![
                 Some(Text::new("Index").into()),
-                Some(Text::new("Sample Text").into()),
+                None,
                 Some(Text::new("What is the best Rust GUI library?").into()),
             ],
             80.0,
