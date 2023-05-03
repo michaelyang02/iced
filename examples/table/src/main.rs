@@ -64,9 +64,9 @@ impl Sandbox for TableDemo {
 
         let header = Row::new(
             vec![
-                Text::new("Index").into(),
-                Text::new("Sample Text").into(),
-                Text::new("What is the best Rust GUI library?").into(),
+                Some(Text::new("Index").into()),
+                Some(Text::new("Sample Text").into()),
+                Some(Text::new("What is the best Rust GUI library?").into()),
             ],
             80.0,
         );
@@ -74,25 +74,25 @@ impl Sandbox for TableDemo {
         let rows = vec![
           Row::new(
                 vec![
-                    Text::new(1.to_string()).into(),
-                    Text::new("Lorem ipsum dolor sit amet, \
+                    Some(Text::new(1.to_string()).into()),
+                    Some(Text::new("Lorem ipsum dolor sit amet, \
                     consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. \
                     Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. \
                     Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. \
-                    Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.").into(),
-                    Text::new("ICED").into(),
+                    Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.").into()),
+                    Some(Text::new("ICED").into()),
                 ],
                 200.0,
             ),
             Row::new(
                 vec![
-                    Text::new(2.to_string()).into(),
-                    Button::new("This is a button in a table!")
+                    None,
+                    Some(Button::new("This is a button in a table!")
                         .on_press(Message::ButtonPressed)
-                        .into(),
-                    TextInput::new("What belongs here?", &self.text_input_str)
+                        .into()),
+                    Some(TextInput::new("What belongs here?", &self.text_input_str)
                         .on_input(Message::TextInputted)
-                        .into(),
+                        .into()),
                 ],
                 100.0,
             ),

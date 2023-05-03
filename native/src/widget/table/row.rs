@@ -1,4 +1,4 @@
-use iced_core::{Alignment, Length, Padding, Point, Rectangle};
+use iced_core::{Alignment, Length, Padding, Point, Rectangle, Size};
 use iced_style::table::StyleSheet;
 
 use crate::layout::flex::Axis;
@@ -6,6 +6,50 @@ use crate::layout::{flex, Limits, Node};
 use crate::renderer::Style;
 use crate::widget::{Operation, Tree};
 use crate::{event, overlay, Clipboard, Element, Event, Layout, Shell, Widget};
+
+mod empty {
+    use super::*;
+
+    pub(super) struct Empty {}
+
+    impl<Message, Renderer> Widget<Message, Renderer> for Empty
+    where
+        Renderer: crate::Renderer,
+    {
+        fn width(&self) -> Length {
+            Length::Shrink
+        }
+
+        fn height(&self) -> Length {
+            Length::Shrink
+        }
+
+        fn layout(&self, _renderer: &Renderer, _limits: &Limits) -> Node {
+            Node::new(Size::ZERO)
+        }
+
+        fn draw(
+            &self,
+            _tree: &Tree,
+            _renderer: &mut Renderer,
+            _theme: &Renderer::Theme,
+            _style: &Style,
+            _layout: Layout<'_>,
+            _cursor_position: Point,
+            _viewport: &Rectangle,
+        ) {
+        }
+    }
+
+    impl<Message, Renderer> From<Empty> for Element<'_, Message, Renderer>
+    where
+        Renderer: crate::Renderer,
+    {
+        fn from(empty: Empty) -> Self {
+            Self::new(empty)
+        }
+    }
+}
 
 /// A [`Row`] of a [`Table`] widget.
 #[allow(missing_debug_implementations)]
@@ -25,12 +69,16 @@ where
     Renderer: crate::Renderer,
     Renderer::Theme: StyleSheet,
 {
-    /// Creates a new [`Table`] row.
+    /// Creates a new [`Table`] row with the given `cells`,
+    /// where [`None`] denotes an empty cell, and `height`.
     pub fn new(
-        cells: Vec<Element<'a, Message, Renderer>>,
+        cells: Vec<Option<Element<'a, Message, Renderer>>>,
         height: f32,
     ) -> Self {
-        Self { cells, height }
+        Self {
+            cells: cells.into_iter().map(|c| c.unwrap_or(Element::from(empty::Empty {}))).collect(),
+            height,
+        }
     }
 }
 
@@ -153,20 +201,21 @@ mod private {
             viewport: &Rectangle,
             renderer: &Renderer,
         ) -> Interaction {
-            self.cells.iter()
-            .zip(&tree.children)
-            .zip(layout.children())
-            .map(|((cell, state), layout)| {
-                cell.as_widget().mouse_interaction(
-                    state,
-                    layout,
-                    cursor_position,
-                    viewport,
-                    renderer,
-                )
-            })
-            .max()
-            .unwrap_or_default()
+            self.cells
+                .iter()
+                .zip(&tree.children)
+                .zip(layout.children())
+                .map(|((cell, state), layout)| {
+                    cell.as_widget().mouse_interaction(
+                        state,
+                        layout,
+                        cursor_position,
+                        viewport,
+                        renderer,
+                    )
+                })
+                .max()
+                .unwrap_or_default()
         }
 
         fn overlay<'b>(
