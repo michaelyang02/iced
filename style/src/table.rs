@@ -17,8 +17,6 @@ pub struct Appearance {
     /// The horizontal border [`Color`] between rows of the table.
     pub horizontal_border_color: Color,
 
-    /// The outside border radius of the table.
-    pub border_radius: f32,
     /// The outside border width of the table.
     pub border_width: f32,
     /// The outside border [`Color`] of the table.

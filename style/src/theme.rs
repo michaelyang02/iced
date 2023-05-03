@@ -647,12 +647,11 @@ impl table::StyleSheet for Theme {
                         palette.background.base.color,
                     ),
                     vertical_border_width: 1.0,
-                    vertical_border_color: palette.secondary.base.color,
+                    vertical_border_color: palette.primary.base.color,
                     horizontal_border_width: 1.0,
-                    horizontal_border_color: palette.secondary.base.color,
-                    border_radius: 0.0,
+                    horizontal_border_color: palette.primary.base.color,
                     border_width: 1.0,
-                    border_color: palette.secondary.base.color,
+                    border_color: palette.primary.base.color,
                 }
             }
             Table::Custom(custom) => custom.active(self),

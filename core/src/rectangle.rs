@@ -1,4 +1,4 @@
-use crate::{Point, Size, Vector};
+use crate::{Padding, Point, Size, Vector};
 
 /// A rectangle.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -107,6 +107,17 @@ impl Rectangle<f32> {
             y: self.y as u32,
             width: self.width as u32,
             height: self.height as u32,
+        }
+    }
+
+    /// Pads the [`Rectangle`] with the given [`Padding`].
+    pub fn pad(self, padding: impl Into<Padding>) -> Self {
+        let padding = padding.into();
+        Self {
+            x: self.x + padding.left,
+            y: self.y + padding.top,
+            width: (self.width - padding.horizontal()).max(0.0),
+            height: (self.height - padding.vertical()).max(0.0),
         }
     }
 }

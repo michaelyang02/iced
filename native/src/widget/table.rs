@@ -5,7 +5,7 @@ use background::RowBackground;
 pub use column::Column;
 use iced_core::alignment::{Horizontal, Vertical};
 use iced_core::mouse::Interaction;
-use iced_core::{Alignment, Padding, Point, Rectangle};
+use iced_core::{Alignment, Background, Color, Padding, Point, Rectangle};
 use iced_style::container;
 pub use iced_style::table::{Appearance, StyleSheet};
 pub use length::Length;
@@ -84,7 +84,8 @@ where
                         if cells.len() != columns.len() {
                             Err(columns.len())
                         } else {
-                            Ok(Self::row(cells, height, &columns, None).into())
+                            Ok(Self::row(cells, height, &columns, None, None)
+                                .into())
                         }
                     })
                     .collect::<Result<Vec<_>, _>>()?
@@ -160,10 +161,14 @@ where
     ///
     /// * If `overriding_alignment` is [`Some(_)`], it is applied to all cells of the header [`Row`].
     /// Otherwise, the alignments of each [`Column`] of the [`Table`] is applied.
+    ///
+    /// * If `overriding_padding` is [`Some(_)`], it is applied to all cells of the header [`Row`].
+    /// Otherwise, the padding of each [`Column`] of the [`Table`] is applied.
     pub fn try_header(
         self,
         header: Row<'a, Message, Renderer>,
         overriding_alignments: Option<(Horizontal, Vertical)>,
+        overriding_padding: Option<Padding>,
     ) -> Result<Table<'a, Message, Renderer>, usize>
     where
         Message: 'a,
@@ -181,6 +186,7 @@ where
                             header.height,
                             &self.columns,
                             overriding_alignments,
+                            overriding_padding,
                         )
                         .into(),
                     )
@@ -215,6 +221,7 @@ where
         height: f32,
         columns: &'_ [Column],
         overriding_alignments: Option<(Horizontal, Vertical)>,
+        overriding_padding: Option<Padding>,
     ) -> Row<'b, Message, Renderer>
     where
         E: Into<Element<'b, Message, Renderer>>,
@@ -229,7 +236,7 @@ where
                     Container::new(e)
                         .width(iced_core::Length::from(c.width))
                         .height(iced_core::Length::Fixed(height))
-                        .padding(c.cell_padding)
+                        .padding(overriding_padding.unwrap_or(c.cell_padding))
                         .align_x(overriding_alignments.unwrap_or(c.alignment).0)
                         .align_y(overriding_alignments.unwrap_or(c.alignment).1)
                         .into()
@@ -330,15 +337,14 @@ where
         cursor_position: Point,
         viewport: &Rectangle,
     ) {
+        let appearance = theme.active(&self.style);
         let mut background = RowBackground::new(self, theme);
 
         for ((row, state), layout) in
             self.into_iter().zip(&tree.children).zip(layout.children())
         {
-            renderer.fill_quad(
-                row_bounds_to_quad(layout.bounds()),
-                background.next(),
-            );
+            Self::paint_row(renderer, layout.bounds(), &mut background);
+
             row.as_widget().draw(
                 state,
                 renderer,
@@ -349,6 +355,7 @@ where
                 viewport,
             );
         }
+        Self::draw_table_borders(renderer, layout.bounds(), self.padding, appearance);
     }
 
     fn children(&self) -> Vec<Tree> {
@@ -475,12 +482,69 @@ impl State {
     }
 }
 
+impl<Message, Renderer> Table<'_, Message, Renderer>
+where
+    Renderer: crate::Renderer,
+    Renderer::Theme: StyleSheet + container::StyleSheet,
+{
+    fn paint_row(
+        renderer: &mut Renderer,
+        bounds: Rectangle,
+        background: &mut RowBackground,
+    ) {
+        renderer.fill_quad(row_bounds_to_quad(bounds), background.next());
+    }
+
+    fn draw_borders() {
+        // Self::draw_table_borders();
+        // Self::draw_horizontal_borders();
+        // Self::draw_vertical_borders();
+    }
+
+    fn draw_table_borders(
+        renderer: &mut Renderer,
+        bounds: Rectangle,
+        padding: Padding,
+        appearance: Appearance,
+    ) {
+        renderer.fill_quad(
+            Quad {
+                bounds: bounds.pad(padding_with_border_width(
+                    padding,
+                    appearance.border_width,
+                )),
+                border_radius: Default::default(),
+                border_width: appearance.border_width,
+                border_color: appearance.border_color,
+            },
+            Background::Color(Color::TRANSPARENT),
+        );
+    }
+
+    fn draw_horizontal_borders() {
+        todo!()
+    }
+
+    fn draw_vertical_borders() {
+        todo!()
+    }
+}
+
 fn row_bounds_to_quad(bounds: Rectangle) -> Quad {
     Quad {
         bounds,
         border_radius: Default::default(),
         border_width: 0.0,
         border_color: Default::default(),
+    }
+}
+
+fn padding_with_border_width(padding: Padding, border_width: f32) -> Padding {
+    Padding {
+        top: padding.top - border_width,
+        right: padding.right - border_width,
+        bottom: padding.bottom - border_width,
+        left: padding.left - border_width,
     }
 }
 

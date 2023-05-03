@@ -39,7 +39,7 @@ impl Sandbox for TableDemo {
             }
             Message::TextInputted(str) => {
                 self.text_input_str = str;
-            },
+            }
         }
     }
 
@@ -48,17 +48,17 @@ impl Sandbox for TableDemo {
             Column {
                 width: Length::Fixed(100.0),
                 alignment: (Horizontal::Center, Vertical::Center),
-                cell_padding: Padding::from(5.0),
+                cell_padding: Padding::from(10.0),
             },
             Column {
                 width: Length::Fixed(500.0),
                 alignment: (Horizontal::Left, Vertical::Top),
-                cell_padding: Padding::from(5.0),
+                cell_padding: Padding::from(10.0),
             },
             Column {
                 width: Length::Fill,
                 alignment: (Horizontal::Right, Vertical::Bottom),
-                cell_padding: Padding::from(5.0),
+                cell_padding: Padding::from(20.0),
             },
         ];
 
@@ -68,7 +68,7 @@ impl Sandbox for TableDemo {
                 Text::new("Sample Text").into(),
                 Text::new("What is the best Rust GUI library?").into(),
             ],
-            50.0,
+            80.0,
         );
 
         let rows = vec![
@@ -103,7 +103,11 @@ impl Sandbox for TableDemo {
             .fill_factor(1)
             .padding(Padding::new(50.0))
             .striped(true)
-            .try_header(header, Some((Horizontal::Center, Vertical::Center)))
+            .try_header(
+                header,
+                Some((Horizontal::Left, Vertical::Center)),
+                Some(Padding::from(5.0)),
+            )
             .unwrap();
 
         table.into()
