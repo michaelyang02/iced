@@ -323,7 +323,7 @@ where
             0.0,
             Alignment::Start,
             self,
-            self.len() + self.header.is_some() as usize,
+            self.len(),
         )
     }
 
@@ -495,11 +495,10 @@ fn update<'a, Message>(
     event::Status::Ignored
 }
 
-
 impl<Message, Renderer> Table<'_, Message, Renderer>
-    where
-        Renderer: crate::Renderer,
-        Renderer::Theme: StyleSheet + container::StyleSheet,
+where
+    Renderer: crate::Renderer,
+    Renderer::Theme: StyleSheet + container::StyleSheet,
 {
     fn paint_row(
         renderer: &mut Renderer,
@@ -515,9 +514,22 @@ impl<Message, Renderer> Table<'_, Message, Renderer>
         padding: Padding,
         appearance: Appearance,
     ) {
-        Self::draw_table_borders(renderer, layout, padding, appearance);
-        Self::draw_horizontal_borders(renderer, layout, appearance);
-        // Self::draw_vertical_borders();
+        if appearance.border_width != 0.0
+            && appearance.border_color != Color::TRANSPARENT
+        {
+            Self::draw_table_borders(renderer, layout, padding, appearance);
+        }
+
+        if appearance.horizontal_border_width != 0.0
+            && appearance.horizontal_border_color != Color::TRANSPARENT
+        {
+            Self::draw_horizontal_borders(renderer, layout, appearance);
+        }
+        if appearance.vertical_border_width != 0.0
+            && appearance.vertical_border_color != Color::TRANSPARENT
+        {
+            Self::draw_vertical_borders(renderer, layout, padding, appearance);
+        }
     }
 
     fn draw_table_borders(
@@ -559,13 +571,42 @@ impl<Message, Renderer> Table<'_, Message, Renderer>
                     border_width: 0.0,
                     border_color: Default::default(),
                 },
-                appearance.horizontal_border_color
+                appearance.horizontal_border_color,
             )
         }
     }
 
-    fn draw_vertical_borders() {
-        todo!()
+    fn draw_vertical_borders(
+        renderer: &mut Renderer,
+        layout: Layout<'_>,
+        padding: Padding,
+        appearance: Appearance,
+    ) {
+        let Some(first_row_layout) = layout.children().next() else {
+            return;
+        };
+        let height = layout
+            .bounds()
+            .pad(padding_with_border_width(padding, appearance.border_width))
+            .height
+            - appearance.border_width;
+        for layout in first_row_layout.children().skip(1) {
+            let bounds = layout.bounds();
+            renderer.fill_quad(
+                Quad {
+                    bounds: Rectangle {
+                        x: bounds.x - appearance.horizontal_border_width / 2.,
+                        y: bounds.y,
+                        width: appearance.vertical_border_width,
+                        height,
+                    },
+                    border_radius: Default::default(),
+                    border_width: 0.0,
+                    border_color: Default::default(),
+                },
+                appearance.vertical_border_color,
+            )
+        }
     }
 }
 

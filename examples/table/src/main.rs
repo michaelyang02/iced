@@ -1,7 +1,7 @@
 use iced::alignment::{Horizontal, Vertical};
 use iced::widget::table::{Column, Length, Row, Table};
 use iced::widget::{Button, Text, TextInput};
-use iced::{Element, Padding, Sandbox, Settings};
+use iced::{Element, Padding, Sandbox, Settings, theme};
 
 pub fn main() -> iced::Result {
     TableDemo::run(Settings::default())
