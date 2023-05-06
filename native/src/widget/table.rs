@@ -457,44 +457,6 @@ where
     }
 }
 
-impl<'a, Message, Renderer> From<Table<'a, Message, Renderer>>
-    for Element<'a, Message, Renderer>
-where
-    Message: 'a,
-    Renderer: crate::Renderer + 'a,
-    Renderer::Theme: StyleSheet + container::StyleSheet,
-{
-    fn from(table: Table<'a, Message, Renderer>) -> Self {
-        Self::new(table)
-    }
-}
-
-/// The local state of a [`Table`].
-#[derive(Debug, Copy, Clone, Default)]
-pub struct State {
-    keyboard_modifiers: keyboard::Modifiers,
-}
-
-impl State {
-    /// Creates a new [`State`].
-    pub fn new() -> State {
-        State::default()
-    }
-}
-
-/// Processes the given [`Event`] and updates the [`State`] of a [`Table`]
-/// accordingly.
-fn update<'a, Message>(
-    event: Event,
-    layout: Layout<'_>,
-    cursor_position: Point,
-    shell: &mut Shell<'_, Message>,
-    on_selected: Option<&(dyn Fn(Vec<bool>) -> Message + 'a)>,
-    state: impl FnOnce() -> &'a mut State,
-) -> event::Status {
-    event::Status::Ignored
-}
-
 impl<Message, Renderer> Table<'_, Message, Renderer>
 where
     Renderer: crate::Renderer,
@@ -503,7 +465,7 @@ where
     fn paint_row(
         renderer: &mut Renderer,
         bounds: Rectangle,
-        background: &mut RowBackground,
+        background: &mut RowBackground<'_>,
     ) {
         renderer.fill_quad(row_bounds_to_quad(bounds), background.next());
     }
@@ -589,7 +551,7 @@ where
             .bounds()
             .pad(padding_with_border_width(padding, appearance.border_width))
             .height
-            - appearance.border_width;
+            - appearance.border_width * 2.;
         for layout in first_row_layout.children().skip(1) {
             let bounds = layout.bounds();
             renderer.fill_quad(
@@ -626,4 +588,42 @@ fn padding_with_border_width(padding: Padding, border_width: f32) -> Padding {
         bottom: padding.bottom - border_width,
         left: padding.left - border_width,
     }
+}
+
+impl<'a, Message, Renderer> From<Table<'a, Message, Renderer>>
+for Element<'a, Message, Renderer>
+    where
+        Message: 'a,
+        Renderer: crate::Renderer + 'a,
+        Renderer::Theme: StyleSheet + container::StyleSheet,
+{
+    fn from(table: Table<'a, Message, Renderer>) -> Self {
+        Self::new(table)
+    }
+}
+
+/// The local state of a [`Table`].
+#[derive(Debug, Copy, Clone, Default)]
+pub struct State {
+    keyboard_modifiers: keyboard::Modifiers,
+}
+
+impl State {
+    /// Creates a new [`State`].
+    pub fn new() -> State {
+        State::default()
+    }
+}
+
+/// Processes the given [`Event`] and updates the [`State`] of a [`Table`]
+/// accordingly.
+fn update<'a, Message>(
+    event: Event,
+    layout: Layout<'_>,
+    cursor_position: Point,
+    shell: &mut Shell<'_, Message>,
+    on_selected: Option<&(dyn Fn(Vec<bool>) -> Message + 'a)>,
+    state: impl FnOnce() -> &'a mut State,
+) -> event::Status {
+    event::Status::Ignored
 }

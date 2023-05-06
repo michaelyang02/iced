@@ -1,7 +1,7 @@
 use iced::alignment::{Horizontal, Vertical};
 use iced::widget::table::{Column, Length, Row, Table};
 use iced::widget::{Button, Text, TextInput};
-use iced::{Element, Padding, Sandbox, Settings, theme};
+use iced::{Element, Padding, Sandbox, Settings};
 
 pub fn main() -> iced::Result {
     TableDemo::run(Settings::default())
@@ -24,7 +24,10 @@ impl Sandbox for TableDemo {
     type Message = Message;
 
     fn new() -> Self {
-        Self::default()
+        Self {
+            text_input_str: "".to_owned(),
+            selected_rows: vec![true, false],
+        }
     }
 
     fn title(&self) -> String {
@@ -35,7 +38,7 @@ impl Sandbox for TableDemo {
         match message {
             Message::SelectedRows(rows) => self.selected_rows = rows,
             Message::ButtonPressed => {
-                dbg!("There is a button being pressed!");
+                self.selected_rows = vec![false, true];
             }
             Message::TextInputted(str) => {
                 self.text_input_str = str;
@@ -103,6 +106,10 @@ impl Sandbox for TableDemo {
             .fill_factor(1)
             .padding(Padding::new(50.0))
             .striped(true)
+            .try_selected(&self.selected_rows, |selected_rows| {
+                Message::SelectedRows(selected_rows)
+            })
+            .unwrap()
             .try_header(
                 header,
                 Some((Horizontal::Left, Vertical::Center)),

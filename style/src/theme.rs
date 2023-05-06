@@ -679,7 +679,7 @@ impl table::StyleSheet for Theme {
     fn selected_background(&self, style: &Self::Style) -> Background {
         match style {
             Table::Default => Background::Color(
-                self.extended_palette().background.strong.color,
+                self.extended_palette().primary.weak.color,
             ),
             Table::Custom(custom) => custom.selected_background(self),
         }
