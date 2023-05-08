@@ -5,7 +5,9 @@ use background::RowBackground;
 pub use column::Column;
 use iced_core::alignment::{Horizontal, Vertical};
 use iced_core::mouse::Interaction;
-use iced_core::{Alignment, Background, Color, Padding, Point, Rectangle};
+use iced_core::{
+    mouse, Alignment, Background, Color, Padding, Point, Rectangle,
+};
 use iced_style::container;
 pub use iced_style::table::{Appearance, StyleSheet};
 pub use length::Length;
@@ -14,10 +16,10 @@ use selected::Selected;
 
 use crate::layout::{flex, Limits, Node};
 use crate::renderer::Quad;
-use crate::widget::{Container, Operation, Tree};
+use crate::widget::{Container, Operation, Tree, tree};
 use crate::{
-    event, keyboard, overlay, renderer, Clipboard, Element, Event, Layout,
-    Shell, Widget,
+    event, keyboard, overlay, renderer, touch, Clipboard, Element, Event,
+    Layout, Shell, Widget,
 };
 
 mod background;
@@ -358,6 +360,14 @@ where
         Self::draw_borders(renderer, layout, self.padding, appearance);
     }
 
+    fn tag(&self) -> tree::Tag {
+        tree::Tag::of::<State>()
+    }
+
+    fn state(&self) -> tree::State {
+        tree::State::new(State::new())
+    }
+
     fn children(&self) -> Vec<Tree> {
         self.into_iter().map(Tree::new).collect()
     }
@@ -402,7 +412,8 @@ where
             layout,
             cursor_position,
             shell,
-            self.selected.as_ref().map(|s| s.on_selected.as_ref()),
+            self.header.is_some(),
+            self.selected.as_mut(),
             || tree.state.downcast_mut::<State>(),
         );
 
@@ -591,11 +602,11 @@ fn padding_with_border_width(padding: Padding, border_width: f32) -> Padding {
 }
 
 impl<'a, Message, Renderer> From<Table<'a, Message, Renderer>>
-for Element<'a, Message, Renderer>
-    where
-        Message: 'a,
-        Renderer: crate::Renderer + 'a,
-        Renderer::Theme: StyleSheet + container::StyleSheet,
+    for Element<'a, Message, Renderer>
+where
+    Message: 'a,
+    Renderer: crate::Renderer + 'a,
+    Renderer::Theme: StyleSheet + container::StyleSheet,
 {
     fn from(table: Table<'a, Message, Renderer>) -> Self {
         Self::new(table)
@@ -605,6 +616,7 @@ for Element<'a, Message, Renderer>
 /// The local state of a [`Table`].
 #[derive(Debug, Copy, Clone, Default)]
 pub struct State {
+    last_selected: Option<usize>,
     keyboard_modifiers: keyboard::Modifiers,
 }
 
@@ -622,8 +634,33 @@ fn update<'a, Message>(
     layout: Layout<'_>,
     cursor_position: Point,
     shell: &mut Shell<'_, Message>,
-    on_selected: Option<&(dyn Fn(Vec<bool>) -> Message + 'a)>,
+    has_header: bool,
+    selected: Option<&mut Selected<'_, Message>>,
     state: impl FnOnce() -> &'a mut State,
 ) -> event::Status {
+    if let Some(Selected {
+        selected_rows,
+        on_selected,
+    }) = selected
+    {
+        let state = state();
+        match event {
+            Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left))
+            | Event::Touch(touch::Event::FingerPressed { .. }) => {
+                if layout.bounds().contains(cursor_position) {
+                    for (index, row_layout) in layout.children().skip(has_header as usize).enumerate() {
+                        if row_layout.bounds().contains(cursor_position) {
+                            let mut new_selected_rows = vec![false; selected_rows.len()];
+                            new_selected_rows[index] = true;
+                            shell.publish(on_selected(new_selected_rows));
+                            state.last_selected = Some(index);
+                            return event::Status::Captured;
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
     event::Status::Ignored
 }
