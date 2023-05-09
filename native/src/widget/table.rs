@@ -16,7 +16,7 @@ use selected::Selected;
 
 use crate::layout::{flex, Limits, Node};
 use crate::renderer::Quad;
-use crate::widget::{Container, Operation, Tree, tree};
+use crate::widget::{tree, Container, Operation, Tree};
 use crate::{
     event, keyboard, overlay, renderer, touch, Clipboard, Element, Event,
     Layout, Shell, Widget,
@@ -375,6 +375,7 @@ where
     fn diff(&self, tree: &mut Tree) {
         tree.diff_children_iter(
             self,
+            self.len(),
             |tree, element| tree.diff(element.as_widget()),
             |element| Tree::new(element.as_widget()),
         );
@@ -648,9 +649,12 @@ fn update<'a, Message>(
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left))
             | Event::Touch(touch::Event::FingerPressed { .. }) => {
                 if layout.bounds().contains(cursor_position) {
-                    for (index, row_layout) in layout.children().skip(has_header as usize).enumerate() {
+                    for (index, row_layout) in
+                        layout.children().skip(has_header as usize).enumerate()
+                    {
                         if row_layout.bounds().contains(cursor_position) {
-                            let mut new_selected_rows = vec![false; selected_rows.len()];
+                            let mut new_selected_rows =
+                                vec![false; selected_rows.len()];
                             new_selected_rows[index] = true;
                             shell.publish(on_selected(new_selected_rows));
                             state.last_selected = Some(index);

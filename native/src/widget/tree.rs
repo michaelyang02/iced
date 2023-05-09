@@ -1,7 +1,6 @@
 //! Store internal widget state in a state tree to ensure continuity.
 use crate::Widget;
 
-use itertools::{EitherOrBoth, Itertools};
 use std::any::{self, Any};
 use std::borrow::Borrow;
 use std::fmt;
@@ -53,8 +52,6 @@ impl Tree {
     /// [`Widget`] proceeds with the reconciliation (i.e. [`Widget::diff`] is called).
     ///
     /// Otherwise, the whole [`Tree`] is recreated.
-    ///
-    /// [`Widget::diff`]: crate::Widget::diff
     pub fn diff<'a, Message, Renderer>(
         &mut self,
         new: impl Borrow<dyn Widget<Message, Renderer> + 'a>,
@@ -90,31 +87,33 @@ impl Tree {
         diff: impl Fn(&mut Tree, &T),
         new_state: impl Fn(&T) -> Self,
     ) {
-        self.diff_children_iter(new_children, diff, new_state)
+        self.diff_children_iter(
+            new_children,
+            new_children.len(),
+            diff,
+            new_state,
+        )
     }
 
     pub(crate) fn diff_children_iter<'a, T: 'a>(
         &mut self,
         new_children: impl IntoIterator<Item = &'a T>,
+        new_children_len: usize,
         diff: impl Fn(&mut Tree, &T),
         new_state: impl Fn(&T) -> Self,
     ) {
-        let old_children = std::mem::take(&mut self.children);
-        self.children = old_children
-            .into_iter()
-            .zip_longest(new_children.into_iter())
-            .take_while(|zip| {
-                matches!(zip, EitherOrBoth::Both(_, _) | EitherOrBoth::Right(_))
-            })
-            .map(|zip| match zip {
-                EitherOrBoth::Left(_) => panic!(),
-                EitherOrBoth::Both(mut old, new) => {
-                    diff(&mut old, new);
-                    old
-                }
-                EitherOrBoth::Right(new) => new_state(new),
-            })
-            .collect();
+        let mut new_children_iter = new_children.into_iter();
+
+        self.children.truncate(new_children_len);
+
+        self.children
+            .iter_mut()
+            .zip(new_children_iter.by_ref())
+            .for_each(|(c, n)| {
+                diff(c, n);
+            });
+
+        self.children.extend(new_children_iter.map(new_state))
     }
 }
 

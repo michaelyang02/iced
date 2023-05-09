@@ -221,14 +221,6 @@ impl<'a, Message, Renderer> Borrow<dyn Widget<Message, Renderer> + 'a>
     }
 }
 
-impl<'a, Message, Renderer> Borrow<dyn Widget<Message, Renderer> + 'a>
-    for &Element<'a, Message, Renderer>
-{
-    fn borrow(&self) -> &(dyn Widget<Message, Renderer> + 'a) {
-        self.widget.borrow()
-    }
-}
-
 impl<'a, Message, Renderer> BorrowMut<dyn Widget<Message, Renderer> + 'a>
     for Element<'a, Message, Renderer>
 {
@@ -237,7 +229,17 @@ impl<'a, Message, Renderer> BorrowMut<dyn Widget<Message, Renderer> + 'a>
     }
 }
 
-impl<'a, Message, Renderer> Borrow<dyn Widget<Message, Renderer> + 'a> for &mut Element<'a, Message, Renderer> {
+impl<'a, Message, Renderer> Borrow<dyn Widget<Message, Renderer> + 'a>
+    for &Element<'a, Message, Renderer>
+{
+    fn borrow(&self) -> &(dyn Widget<Message, Renderer> + 'a) {
+        self.widget.borrow()
+    }
+}
+
+impl<'a, Message, Renderer> Borrow<dyn Widget<Message, Renderer> + 'a>
+    for &mut Element<'a, Message, Renderer>
+{
     fn borrow(&self) -> &(dyn Widget<Message, Renderer> + 'a) {
         self.widget.borrow()
     }
