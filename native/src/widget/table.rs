@@ -4,6 +4,7 @@ use std::borrow::Cow;
 use background::RowBackground;
 pub use column::Column;
 use iced_core::alignment::{Horizontal, Vertical};
+use iced_core::keyboard::Modifiers;
 use iced_core::mouse::Interaction;
 use iced_core::{
     mouse, Alignment, Background, Color, Padding, Point, Rectangle,
@@ -618,7 +619,7 @@ where
 #[derive(Debug, Copy, Clone, Default)]
 pub struct State {
     last_selected: Option<usize>,
-    keyboard_modifiers: keyboard::Modifiers,
+    keyboard_modifiers: Modifiers,
 }
 
 impl State {
@@ -639,6 +640,10 @@ fn update<'a, Message>(
     selected: Option<&mut Selected<'_, Message>>,
     state: impl FnOnce() -> &'a mut State,
 ) -> event::Status {
+    if !layout.bounds().contains(cursor_position) {
+        return event::Status::Ignored;
+    }
+
     if let Some(Selected {
         selected_rows,
         on_selected,
@@ -648,23 +653,52 @@ fn update<'a, Message>(
         match event {
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left))
             | Event::Touch(touch::Event::FingerPressed { .. }) => {
-                if layout.bounds().contains(cursor_position) {
-                    for (index, row_layout) in
-                        layout.children().skip(has_header as usize).enumerate()
-                    {
-                        if row_layout.bounds().contains(cursor_position) {
-                            let mut new_selected_rows =
-                                vec![false; selected_rows.len()];
-                            new_selected_rows[index] = true;
+                for (index, row_layout) in
+                    layout.children().skip(has_header as usize).enumerate()
+                {
+                    if row_layout.bounds().contains(cursor_position) {
+                        let mut new_selected_rows = if state
+                            .keyboard_modifiers
+                            .contains(Modifiers::CTRL)
+                        {
+                            std::mem::take(selected_rows).into_owned()
+                        } else {
+                            vec![false; selected_rows.len()]
+                        };
+
+                        if state.keyboard_modifiers.contains(Modifiers::SHIFT) {
+                            let last_index =
+                                state.last_selected.unwrap_or(index);
+                            if last_index <= index {
+                                last_index..=index
+                            } else {
+                                index..=last_index
+                            }
+                            .for_each(|i| {
+                                new_selected_rows[i] = true;
+                            });
                             shell.publish(on_selected(new_selected_rows));
+                        } else {
+                            new_selected_rows[index] = if state
+                                .keyboard_modifiers
+                                .contains(Modifiers::CTRL)
+                            {
+                                !new_selected_rows[index]
+                            } else {
+                                true
+                            };
                             state.last_selected = Some(index);
-                            return event::Status::Captured;
+                            shell.publish(on_selected(new_selected_rows));
                         }
+                        return event::Status::Captured;
                     }
                 }
             }
+            Event::Keyboard(keyboard::Event::ModifiersChanged(modifiers)) => {
+                state.keyboard_modifiers = modifiers;
+            }
             _ => {}
-        }
+        };
     }
     event::Status::Ignored
 }
