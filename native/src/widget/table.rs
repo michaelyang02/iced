@@ -666,30 +666,32 @@ fn update<'a, Message>(
                             vec![false; selected_rows.len()]
                         };
 
-                        if state.keyboard_modifiers.contains(Modifiers::SHIFT) {
+                        new_selected_rows[index] = if state
+                            .keyboard_modifiers
+                            .contains(Modifiers::CTRL)
+                        {
+                            !new_selected_rows[index]
+                        } else {
+                            true
+                        };
+
+                        if state.keyboard_modifiers.contains(Modifiers::SHIFT)
+                        {
                             let last_index =
                                 state.last_selected.unwrap_or(index);
                             if last_index <= index {
-                                last_index..=index
+                                last_index..index
                             } else {
-                                index..=last_index
+                                index..last_index
                             }
-                            .for_each(|i| {
-                                new_selected_rows[i] = true;
-                            });
-                            shell.publish(on_selected(new_selected_rows));
+                                .for_each(|i| {
+                                    new_selected_rows[i] = true;
+                                });
                         } else {
-                            new_selected_rows[index] = if state
-                                .keyboard_modifiers
-                                .contains(Modifiers::CTRL)
-                            {
-                                !new_selected_rows[index]
-                            } else {
-                                true
-                            };
                             state.last_selected = Some(index);
-                            shell.publish(on_selected(new_selected_rows));
                         }
+
+                        shell.publish(on_selected(new_selected_rows));
                         return event::Status::Captured;
                     }
                 }
