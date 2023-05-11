@@ -675,18 +675,21 @@ fn update<'a, Message>(
                             true
                         };
 
-                        if state.keyboard_modifiers.contains(Modifiers::SHIFT)
-                        {
-                            let last_index =
-                                state.last_selected.unwrap_or(index);
-                            if last_index <= index {
-                                last_index..index
-                            } else {
-                                index..last_index
+                        if state.keyboard_modifiers.contains(Modifiers::SHIFT) {
+                            if new_selected_rows[index] {
+                                let last_index =
+                                    state.last_selected.unwrap_or(index);
+                                if last_index <= index {
+                                    last_index..=(index - 1)
+                                } else {
+                                    (index + 1)..=last_index
+                                }
+                                .for_each(
+                                    |i| {
+                                        new_selected_rows[i] = true;
+                                    },
+                                );
                             }
-                                .for_each(|i| {
-                                    new_selected_rows[i] = true;
-                                });
                         } else {
                             state.last_selected = Some(index);
                         }
